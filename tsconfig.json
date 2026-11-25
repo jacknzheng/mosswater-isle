@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2020",
+    "module": "none",
+    "outFile": ".build/game.js"
+  },
+  "files": ["src/trainer.ts", "src/world.ts", "src/water.ts", "src/quiz.ts", "src/start.ts"]
+}
