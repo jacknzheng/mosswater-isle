@@ -1,7 +1,7 @@
 type Point=[number,number];
 type Place={name:string;door:Point;pin:Point;box:[number,number,number,number]};
 declare const WORLD:{width:number;height:number;cell:number;rows:string[];places:Place[]};
-type Entry={card:number;answer:string;submitted:boolean;rating:"got"|"review"|null};
+type Entry={card:number;answer:string;submitted:boolean;grade?:AnswerGrade;reviewed?:boolean;rating:"got"|"review"|null};
 type Run={node:number;tile?:number;facing?:Facing;screen:"map"|"quiz";started:boolean;cleared:boolean;remaining:number;entries:Entry[]};
 const titles=["Variance across two groups","An exponential density","Three Normal measurements","A limit at zero","Integration by parts","A matrix polynomial","A growing sequence of events","A small change in two inputs","A three-object shuffle"];
 const $=(id:string)=>document.getElementById(id)!;
@@ -63,7 +63,7 @@ const waterFrames:HTMLCanvasElement[]=[];
 let waterFrame=-1,lastTime=0,lastDock=-2,entryOpen=0,irisRadius=-1,heroFrame="";
 function write(){state.tile=tile;state.facing=facing;try{book.runs[mission.date]=state;book.active=mission.date;book.tile=tile;book.facing=facing;localStorage.setItem(bookKey,JSON.stringify(book));queueCloud();$("warn").hidden=true;}catch{$("warn").hidden=false;$("warn").textContent="Saving is unavailable in this browser. Keep this tab open to retain your session.";}}
 const minutes=(ms:number)=>{const n=Math.ceil(Math.max(0,ms)/1000);return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");};
-const current=()=>state.entries.findIndex(e=>!e.rating);
+const current=()=>state.entries.findIndex(e=>!e.rating||(e.grade&&!e.reviewed));
 function elapsed(){if(deadline!==null)state.remaining=Math.max(0,deadline-Date.now());}
 function atPlace(){return doors.indexOf(tile);}
 function standAt(i:number){tile=doors[i];here=center(tile);facing="south";leg=null;path=[];goal=-1;walking=false;drawHero();}

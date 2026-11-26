@@ -8,10 +8,10 @@ const bookKey="trailbound.campaign.v2";
 const legacyKey="trailbound.mosswater.mill.v1";
 function emptyRun(cards:Card[]):Run{return {node:0,screen:"map",started:false,cleared:false,remaining:3600000,entries:cards.map(c=>({card:c.id,answer:"",submitted:false,rating:null}))};}
 function validRun(run:Run, cards?:Card[]){
- return !!run&&Number.isFinite(run.remaining)&&Array.isArray(run.entries)&&run.entries.length>0&&(!cards||cards.length===run.entries.length)&&run.entries.every((e,i)=>Number.isSafeInteger(e.card)&&(!cards||e.card===cards[i].id)&&typeof e.answer==="string"&&[null,"got","review"].includes(e.rating));
+ return !!run&&Number.isFinite(run.remaining)&&Array.isArray(run.entries)&&run.entries.length>0&&(!cards||cards.length===run.entries.length)&&run.entries.every((e,i)=>Number.isSafeInteger(e.card)&&(!cards||e.card===cards[i].id)&&typeof e.answer==="string"&&(e.grade===undefined||validGrade(e.grade))&&[null,"got","review"].includes(e.rating));
 }
 function validBook(b:Book){return b?.version===2&&!!b.runs&&typeof b.runs==="object"&&Object.entries(b.runs).every(([id,r])=>/^\d{4}-\d{2}-\d{2}$/.test(id)&&validRun(r,missions.find(m=>m.date===id)?.cards));}
-function ratingStars(run?:Run){return run?.cleared?Math.max(1,Math.round(5*run.entries.filter(e=>e.rating==="got").length/run.entries.length)):0;}
+function ratingStars(run?:Run){return run?.cleared?Math.max(1,Math.round(5*run.entries.reduce((sum,e)=>sum+(e.grade?e.grade.earned/e.grade.total:Number(e.rating==="got")),0)/run.entries.length)):0;}
 function starLine(n:number){return '<span class="stars" aria-label="'+(n?n+' of 5 stars':'Unfinished')+'"><b>'+'★'.repeat(n)+'</b><i>'+'★'.repeat(5-n)+'</i></span>';}
 let book:Book={version:2,active:mill.date,runs:{}};
 try{

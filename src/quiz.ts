@@ -50,17 +50,27 @@ function jacobian(){
 }
 function question(){
  if(state.remaining<=0){refreshClock();return;}const i=current();if(i<0){finish();return;}
- const card=CARDS[i],entry=state.entries[i];$("timer").textContent=minutes(state.remaining);$("leave").textContent="Save & exit";$("progress").style.width=(100*i/CARDS.length)+"%";
+ const card=CARDS[i],entry=state.entries[i],graded=mission===mill;$("timer").textContent=minutes(state.remaining);$("leave").textContent="Save & exit";$("progress").style.width=(100*i/CARDS.length)+"%";
  paper.innerHTML='<div class="count">Question '+(i+1)+' / '+CARDS.length+' · '+(entry.submitted?"Feedback":"60 minute recall")+'</div><h2 id="qtitle">'+(CARDS[i].title??titles[i]??"Question "+(i+1))+'</h2>';
  if(!entry.submitted){
-  paper.insertAdjacentHTML("beforeend",'<div class="cardtext">'+card.front+'</div><div class="workarea"><label for="answer">Your answer and reasoning</label><textarea id="answer" placeholder="Show your calculation or explain your reasoning…" spellcheck="false"></textarea><div role="alert" class="error" id="error"></div><div class="actions"><button class="primary" id="submit">Submit answer →</button></div></div>');
+  paper.insertAdjacentHTML("beforeend",'<div class="cardtext">'+card.front+'</div><div class="workarea"><label for="answer">Your answer and reasoning</label><textarea id="answer" placeholder="Show your calculation or explain your reasoning…" spellcheck="false"></textarea><div role="alert" class="error" id="error"></div><div id="check-feedback" class="check-feedback" aria-live="polite" hidden></div><div class="actions">'+(graded?'<button class="primary" id="check">Check my answer</button><button class="secondary" id="submit">Submit final answer →</button><button class="secondary" id="self-check" hidden>Reveal solution and self-check</button>':'<button class="primary" id="submit">Submit answer →</button>')+'</div></div>');
   const inp=$("answer") as HTMLTextAreaElement;inp.value=entry.answer;inp.oninput=()=>{entry.answer=inp.value;$("error").textContent="";elapsed();write();};
-  $("submit").onclick=()=>{refreshClock();if(reading)return;if(!entry.answer.trim()){$("error").textContent="Write your attempt before revealing the solution.";inp.focus();return;}entry.submitted=true;elapsed();write();question();};
+  if(graded){
+   const help=document.createElement("small");help.textContent="Checks let you revise. Written reasoning uses OpenAI. Only your final answer counts.";inp.after(help);
+   attachAnswerCheck(entry,inp);
+  }else $("submit").onclick=()=>{refreshClock();if(reading)return;if(!entry.answer.trim()){$("error").textContent="Write your attempt before revealing the solution.";inp.focus();return;}entry.submitted=true;elapsed();write();question();};
  }else{
   paper.insertAdjacentHTML("beforeend",'<details class="recap questionagain"><summary>Original question</summary><div class="cardtext">'+card.front+'</div></details><div class="note"><div class="eyebrow">Your answer</div><div class="written" id="mine"></div></div><h3>Worked solution</h3><div class="cardtext">'+card.back+'</div>');$("mine").textContent=entry.answer;
   if(mission===mill&&i===0)paper.append(variance());if(mission===mill&&i===7)paper.append(jacobian());
+  if(entry.grade){
+   const panel=document.createElement("div");panel.className="check-feedback";
+   paper.querySelector(".note")!.after(panel);displayGrade(panel,entry.grade);
+   const next=document.createElement("button");next.className="primary";next.id="next";next.textContent=i===CARDS.length-1?"Finish mission →":"Next question →";
+   next.onclick=()=>{refreshClock();if(reading||entry.reviewed)return;entry.reviewed=true;write();question();};paper.append(next);
+  }else{
   paper.insertAdjacentHTML("beforeend",'<div class="rating"><h3>How did your reasoning compare?</h3><p>Your check goes in your field notebook.</p><div class="actions"><button class="primary" id="got">Got it ✓</button><button class="secondary" id="review">Needs review</button></div></div>');
   $("got").onclick=()=>rate("got");$("review").onclick=()=>rate("review");
+  }
  }
  paper.scrollTop=0;focusTitle();
 }
@@ -110,11 +120,12 @@ function openJournal(){
  reading=true;state.screen="map";freeze();show();
  const marked=state.entries.filter(e=>e.rating).length,hits=state.entries.filter(e=>e.rating==="got").length;
  $("progress").style.width=(100*marked/CARDS.length)+"%";$("timer").textContent=minutes(state.remaining);$("leave").textContent="Back to island";
- paper.innerHTML='<div class="count">'+mission.name+' · Field notebook</div><h2 id="qtitle">'+(state.cleared?"Your mission record":"Your hour is complete")+'</h2><p>'+marked+' of '+CARDS.length+' self-checked · '+hits+' marked “Got it” · '+(marked-hits)+' marked for review.</p><div id="record" class="notebook"></div>';
+ paper.innerHTML='<div class="count">'+mission.name+' · Field notebook</div><h2 id="qtitle">'+(state.cleared?"Your mission record":"Your hour is complete")+'</h2><p>'+marked+' of '+CARDS.length+' checked · '+hits+' fully correct · '+(marked-hits)+' for review.</p><div id="record" class="notebook"></div>';
  state.entries.forEach((e,i)=>{
-  const d=document.createElement("details"),summary=document.createElement("summary");summary.textContent=(i+1)+". "+(CARDS[i].title??titles[i]??"Question "+(i+1))+" · "+(e.rating==="got"?"Got it":e.rating==="review"?"Needs review":e.submitted?"Submitted":e.answer?"Draft":"Unattempted");d.append(summary);
+  const d=document.createElement("details"),summary=document.createElement("summary");summary.textContent=(i+1)+". "+(CARDS[i].title??titles[i]??"Question "+(i+1))+" · "+(e.grade?e.grade.earned+" / "+e.grade.total+" points":e.rating==="got"?"Got it":e.rating==="review"?"Needs review":e.submitted?"Submitted":e.answer?"Draft":"Unattempted");d.append(summary);
   const front=document.createElement("div");front.className="cardtext";front.innerHTML=CARDS[i].front;d.append(front);
   if(e.answer){const note=document.createElement("div");note.className="note written";note.textContent=e.answer;d.append(note);}
+  if(e.grade){const panel=document.createElement("div");panel.className="check-feedback";displayGrade(panel,e.grade);d.append(panel);}
   if(e.submitted){const solution=document.createElement("div");solution.className="cardtext";solution.innerHTML='<h3>Worked solution</h3>'+CARDS[i].back;d.append(solution);if(mission===mill&&i===0)d.append(variance());if(mission===mill&&i===7)d.append(jacobian());}
   $("record").append(d);
  });

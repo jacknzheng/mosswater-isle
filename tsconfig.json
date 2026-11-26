@@ -12,6 +12,7 @@
     "src/campaign.ts",
     "src/world.ts",
     "src/water.ts",
+    "src/grading.ts",
     "src/quiz.ts",
     "src/cloud.ts",
     "src/start.ts"
