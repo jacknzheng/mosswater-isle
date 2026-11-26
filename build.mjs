@@ -18,7 +18,7 @@ const missions=readdirSync(path.join(root,'missions')).filter(f=>f.endsWith('.js
 });
 const scriptJSON=value=>JSON.stringify(value).replaceAll('<','\\u003c');
 const replacements={
- MAP_ART:data('map.webp','image/webp'), REGION_ART:data('highlands.webp','image/webp'), TRAINER_ART:data('trainer.png','image/png'), PIXEL_FONT:data('pixelify.ttf','font/ttf'),
+ MAP_ART:data('map.webp','image/webp'), TRAINER_ART:data('trainer.png','image/png'), PIXEL_FONT:data('pixelify.ttf','font/ttf'),
  CARD_DATA:read('assets/cards.json'),MISSION_DATA:scriptJSON(missions),
  '/* WORLD_DATA */':'const WORLD = '+read('assets/world.json')+';',
  '/* SUPABASE_SDK */':sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script'),

@@ -32,7 +32,24 @@ if(lastAssigned>=6&&PACKS.length){
 }
 const doors=places.map(p=>tileAt(...p.door));
 const legacyStop=state.node===20||state.screen==="quiz"?1:state.node===42?2:state.node===56?3:0;
-let tile=book.tile!==undefined&&openTile(book.tile)?book.tile:doors[legacyStop];
+let tile=doors[legacyStop];
+if(book.tile!==undefined){
+ const saved=book.tile;
+ if(openTile(saved))tile=saved;
+ else if(Number.isInteger(saved)&&saved>=120*cols&&saved<rows.length*cols){
+  // Keep old Highland saves at their landmark or on the closest surviving trail.
+  const oldDoors=[tileAt(232,804),tileAt(747,944),tileAt(491,1223)];
+  const stop=oldDoors.indexOf(saved);
+  if(stop>=0)tile=doors[4+stop];
+  else{
+   const [x,y]=center(saved);let best=Infinity;
+   for(let id=117*cols;id<rows.length*cols;id++)if(openTile(id)){
+    const [px,py]=center(id),distance=(x-px)**2+(y-py)**2;
+    if(distance<best){best=distance;tile=id;}
+   }
+  }
+ }
+}
 let here:Point=center(tile),facing:Facing=book.facing??state.facing??"south",stride=0,walking=false;
 let deadline:number|null=null,reading=false,ending=false,feedbackTimer=0;
 let path:number[]=[],goal=-1,leg:{from:Point;to:number;distance:number}|null=null,entryTime:number|null=null;
