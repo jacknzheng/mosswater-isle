@@ -1,24 +1,19 @@
-type Point=[number,number];
-type Place={name:string;door:Point;pin:Point;box:[number,number,number,number]};
-declare const WORLD:{width:number;height:number;cell:number;rows:string[];places:Place[]};
 type Entry={card:number;answer:string;submitted:boolean;grade?:AnswerGrade;reviewed?:boolean;rating:"got"|"review"|null};
 type Run={node:number;tile?:number;facing?:Facing;screen:"map"|"quiz";started:boolean;cleared:boolean;remaining:number;entries:Entry[]};
 const titles=["Variance across two groups","An exponential density","Three Normal measurements","A limit at zero","Integration by parts","A matrix polynomial","A growing sequence of events","A small change in two inputs","A three-object shuffle"];
-const $=(id:string)=>document.getElementById(id)!;
 const board=$("terrain"),view=$("view"),paper=$("paper"),popup=$("quiz") as HTMLDialogElement;
 const reduced=matchMedia("(prefers-reduced-motion: reduce)");
-const {width:W,height:H,cell,rows,places}=WORLD,cols=rows[0].length;
 const tileAt=(x:number,y:number)=>Math.floor(y/cell)*cols+Math.floor(x/cell);
-const center=(id:number):Point=>[(id%cols)*cell+2,Math.floor(id/cols)*cell+2];
-const openTile=(id:number)=>Number.isInteger(id)&&id>=0&&rows[Math.floor(id/cols)]?.[id%cols]===".";
-// Later sessions get their own trail marker and save, even after all buildings have missions.
+const center=(id:number):Point=>[(id%cols)*cell+cell/2,Math.floor(id/cols)*cell+cell/2];
+const openTile=(id:number)=>Number.isInteger(id)&&id>=0&&id<solid.length&&!solid[id];
+// Later sessions get their own trail camp and save, even after all buildings have missions.
 const lastAssigned=Math.max(6,...missions.map(stopFor));
 if(lastAssigned>=6&&PACKS.length){
  const trail:number[]=[];
- for(let y=2;y<rows.length-2;y+=2)for(let x=2;x<cols-2;x+=2)if(rows[y][x]===".")trail.push(y*cols+x);
+ for(let y=2;y<lines-2;y++)for(let x=2;x<cols-2;x++)if(grid[y][x]===","&&!solid[y*cols+x])trail.push(y*cols+x);
  for(let index=places.length;index<=lastAssigned+1;index++){
   let candidate=-1;
-  for(const spacing of [54,34,19,8,4]){
+  for(const spacing of [170,110,60,26,13]){
    const start=(index*593)%trail.length;
    for(let j=0;j<trail.length;j++){
     const id=trail[(start+j)%trail.length],p=center(id);
@@ -27,27 +22,24 @@ if(lastAssigned>=6&&PACKS.length){
    if(candidate>=0)break;
   }
   if(candidate<0)break;
-  const door=center(candidate);places.push({name:"Trail camp "+(index-1),door,pin:[door[0],door[1]-8],box:[door[0]-6,door[1]-8,12,10]});
+  const door=center(candidate),x=candidate%cols,y=Math.floor(candidate/cols);
+  // Pitch the tent on open grass beside the trail when there is room.
+  const site=[[0,-1],[-1,0],[1,0],[0,-2]].map(([dx,dy])=>[x+dx,y+dy]).find(([tx,ty])=>grid[ty]?.[tx]==="."&&!solid[ty*cols+tx]);
+  if(site){block(site[0],site[1]);stand("tent",site[0]*cell+cell/2,site[1]*cell+cell-1);}
+  places.push({name:"Trail camp "+(index-1),kind:"camp",door,pin:[door[0],door[1]-(site?.[1]===y-1?36:24)],box:[door[0]-cell/2,door[1]-cell/2,cell,cell]});
  }
 }
+props.sort((a,b)=>a.z-b.z);
 const doors=places.map(p=>tileAt(...p.door));
 const legacyStop=state.node===20||state.screen==="quiz"?1:state.node===42?2:state.node===56?3:0;
 let tile=doors[legacyStop];
-if(book.tile!==undefined){
- const saved=book.tile;
- if(openTile(saved))tile=saved;
- else if(Number.isInteger(saved)&&saved>=120*cols&&saved<rows.length*cols){
-  // Keep old Highland saves at their landmark or on the closest surviving trail.
-  const oldDoors=[tileAt(232,804),tileAt(747,944),tileAt(491,1223)];
-  const stop=oldDoors.indexOf(saved);
-  if(stop>=0)tile=doors[4+stop];
-  else{
-   const [x,y]=center(saved);let best=Infinity;
-   for(let id=117*cols;id<rows.length*cols;id++)if(openTile(id)){
-    const [px,py]=center(id),distance=(x-px)**2+(y-py)**2;
-    if(distance<best){best=distance;tile=id;}
-   }
-  }
+if(book.cell!==undefined&&openTile(book.cell))tile=book.cell;
+else if(Number.isInteger(book.tile)){
+ // A save from the painted map counted five pixel squares, 192 to a row. Stand at the same landmark or the closest open tile.
+ const x=(book.tile!%192)*5+2,y=Math.floor(book.tile!/192)*5+2;let best=Infinity;
+ for(let id=0;id<solid.length;id++)if(!solid[id]){
+  const [px,py]=center(id),distance=(x-px)**2+(y-py)**2-(doors.includes(id)?900:0);
+  if(distance<best){best=distance;tile=id;}
  }
 }
 let here:Point=center(tile),facing:Facing=book.facing??state.facing??"south",stride=0,walking=false;
@@ -56,27 +48,23 @@ let path:number[]=[],goal=-1,leg:{from:Point;to:number;distance:number}|null=nul
 const keyDirections:Record<string,Facing>={arrowup:"north",w:"north",arrowdown:"south",s:"south",arrowleft:"west",a:"west",arrowright:"east",d:"east"};
 const deltas:Record<Facing,number>={north:-cols,south:cols,west:-1,east:1};
 const held:string[]=[];
-const art=$("art") as HTMLImageElement, hero=$("hero") as HTMLCanvasElement, hc=hero.getContext("2d")!;
-const fx=$("waterfx") as HTMLCanvasElement;fx.width=W;fx.height=H;
-const water=fx.getContext("2d")!;
-const waterFrames:HTMLCanvasElement[]=[];
-let waterFrame=-1,lastTime=0,lastDock=-2,entryOpen=0,irisRadius=-1,heroFrame="";
-function write(){state.tile=tile;state.facing=facing;try{book.runs[mission.date]=state;book.active=mission.date;book.tile=tile;book.facing=facing;localStorage.setItem(bookKey,JSON.stringify(book));queueCloud();$("warn").hidden=true;}catch{$("warn").hidden=false;$("warn").textContent="Saving is unavailable in this browser. Keep this tab open to retain your session.";}}
+let lastTime=0,lastDock=-2,entryOpen=0,entryFade=1,entryClip=0,irisRadius=-1,flagRise=0;
+function write(){try{book.runs[mission.date]=state;book.active=mission.date;book.cell=tile;delete book.tile;book.facing=facing;localStorage.setItem(bookKey,JSON.stringify(book));queueCloud();$("warn").hidden=true;}catch{$("warn").hidden=false;$("warn").textContent="Saving is unavailable in this browser. Keep this tab open to retain your session.";}}
 const minutes=(ms:number)=>{const n=Math.ceil(Math.max(0,ms)/1000);return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");};
 const current=()=>state.entries.findIndex(e=>!e.rating||(e.grade&&!e.reviewed));
 function elapsed(){if(deadline!==null)state.remaining=Math.max(0,deadline-Date.now());}
 function atPlace(){return doors.indexOf(tile);}
-function standAt(i:number){tile=doors[i];here=center(tile);facing="south";leg=null;path=[];goal=-1;walking=false;drawHero();}
+function standAt(i:number){tile=doors[i];here=center(tile);facing="south";leg=null;path=[];goal=-1;walking=false;}
 function pinXY(el:HTMLElement|SVGElement,p:Point){el.style.left=(100*p[0]/W)+"%";el.style.top=(100*p[1]/H)+"%";}
-function size(){const w=Math.max(view.clientWidth,view.clientHeight*W/640);board.style.width=w+"px";board.style.height=2*Math.max(view.clientHeight,w/1.9)+"px";camera();}
+// One world pixel covers a whole number of screen pixels, so the art stays crisp.
+function size(){
+ const ratio=window.devicePixelRatio||1,across=Math.min(440,Math.max(240,view.clientWidth*.34));
+ const scale=Math.max(1,Math.round(view.clientWidth*ratio/across),Math.ceil(Math.max(view.clientWidth/W,view.clientHeight/H)*ratio));
+ board.style.width=W*scale/ratio+"px";board.style.height=H*scale/ratio+"px";camera();
+}
 function camera(){
  if(board.clientWidth>view.clientWidth+2)view.scrollLeft=board.clientWidth*here[0]/W-view.clientWidth*.48;
  if(board.clientHeight>view.clientHeight+2)view.scrollTop=board.clientHeight*here[1]/H-view.clientHeight*.55;
-}
-function drawHero(){
- const index=walking?Math.floor(stride/3.5)%4:0,frame=facing+index;
- if(frame!==heroFrame){if(trainerSheet.complete&&trainerSheet.naturalWidth){hc.clearRect(0,0,36,46);hc.drawImage(trainerSheet,[1,0,1,2][index]*36,spriteRow[facing]*46,36,46,0,0,36,46);heroFrame=frame;}}
- pinXY(hero,here);
 }
 function dock(){
  const which=atPlace(),p=places[which];lastDock=which;
@@ -104,7 +92,6 @@ function dock(){
   sign.innerHTML=icon(m?"flag":"lock");sign.append(m?.name??places[i].name);label.replaceChildren(sign);
   label.insertAdjacentHTML("beforeend",starLine(ratingStars(m?book.runs[m.date]:undefined)));
  }
- $("flag").toggleAttribute("hidden",!book.runs[mill.date]?.cleared);pinXY($("flag"),[588,302]);
  $("region-name").textContent=here[1]>=640?"Birch Highlands":"Mosswater Isle";
 }
 function neighbors(id:number){
@@ -126,8 +113,8 @@ function walkTo(target:number){
 }
 function updateWalk(dt:number){
  // Finish the current grid step before turning, so changing direction cannot cut a corner.
- let remaining=dt*.103;
- if(reduced.matches&&goal>=0&&!held.length){tile=goal;here=center(tile);leg=null;path=[];goal=-1;walking=false;drawHero();camera();write();dock();return;}
+ let remaining=dt*.092;
+ if(reduced.matches&&goal>=0&&!held.length){tile=goal;here=center(tile);leg=null;path=[];goal=-1;walking=false;camera();write();dock();return;}
  while(remaining>0){
   if(!leg){
    const key=held[held.length-1],dir=keyDirections[key];
@@ -135,7 +122,7 @@ function updateWalk(dt:number){
    const next=dir?tile+deltas[dir]:path.shift();
    if(next===undefined||!neighbors(tile).includes(next)){
     const stopped=walking||goal>=0;
-    walking=false;goal=-1;stride=0;drawHero();
+    walking=false;goal=-1;stride=0;
     if(stopped||lastDock!==atPlace()){write();dock();}
     return;
    }
@@ -146,7 +133,7 @@ function updateWalk(dt:number){
   const to=center(leg.to),t=leg.distance/cell;
   here=[leg.from[0]+(to[0]-leg.from[0])*t,leg.from[1]+(to[1]-leg.from[1])*t];
   if(leg.distance>=cell){tile=leg.to;leg=null;if(!path.length&&!held.length){walking=false;goal=-1;write();dock();}}
-  drawHero();camera();
+  camera();
  }
 }
 function enterDoor(){
@@ -158,24 +145,26 @@ function animateDoor(now:number){
  const t=reduced.matches?1.4:(now-entryTime!)/1000;
  entryOpen=Math.min(1,t/.26);
  const walk=Math.max(0,Math.min(1,(t-.24)/.58));
- walking=walk>0&&walk<1;stride=walk*18;const door=places[stopFor(mission)].door;here=[door[0],door[1]-walk*15];drawHero();
- hero.style.opacity=String(Math.min(1,(1-walk)*3));hero.style.clipPath="inset("+Math.max(0,walk-.45)*90+"% 0 0 0)";
+ walking=walk>0&&walk<1;stride=walk*18;const door=places[stopFor(mission)].door;here=[door[0],door[1]-walk*13];
+ entryFade=Math.min(1,(1-walk)*3);entryClip=Math.max(0,walk-.45)*.9;
  const iris=$("iris");
  if(t>.7){
-  const pos=board.getBoundingClientRect(),x=pos.left+door[0]/W*pos.width,y=pos.top+(door[1]-17)/H*pos.height;
+  const pos=board.getBoundingClientRect(),x=pos.left+door[0]/W*pos.width,y=pos.top+(door[1]-14)/H*pos.height;
   irisRadius=Math.max(0,1-(t-.7)/.51)*Math.hypot(innerWidth,innerHeight);
   iris.hidden=false;iris.style.background='radial-gradient(circle at '+x+'px '+y+'px,transparent '+irisRadius+'px,#192c29 '+(irisRadius+2)+'px)';
  }
  if(t>=1.23){
-  entryTime=null;entryOpen=0;iris.hidden=true;hero.style.clipPath="";hero.style.opacity="1";standAt(stopFor(mission));waterFrame=-1;enter();
+  entryTime=null;entryOpen=0;entryFade=1;entryClip=0;iris.hidden=true;standAt(stopFor(mission));enter();
  }
 }
 function mapFrame(now:number){
  const dt=lastTime?Math.min(48,now-lastTime):0;lastTime=now;
- if(unlockedGame&&!popup.open&&!document.hidden){
-  if(entryTime!==null)animateDoor(now);
-  else if(leg||path.length||held.length||walking)updateWalk(dt);
-  paintWater(now);
+ if(!popup.open&&!document.hidden){
+  if(unlockedGame){
+   if(entryTime!==null)animateDoor(now);
+   else if(leg||path.length||held.length||walking)updateWalk(dt);
+  }
+  paint(now);
  }
  requestAnimationFrame(mapFrame);
 }
@@ -188,7 +177,7 @@ function installMap(){
   const i=places.findIndex(({box:[a,b,w,h]})=>x>=a&&y>=b&&x<=a+w&&y<=b+h);
   if(i>=0){walkTo(doors[i]);return;}
   const nearest=tileAt(x,y);if(openTile(nearest)){walkTo(nearest);return;}
-  let best=-1,dist=11;
+  let best=-1,dist=cell*2.4;
   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const n=nearest+dy*cols+dx;if(openTile(n)){const p=center(n),d=Math.hypot(p[0]-x,p[1]-y);if(d<dist){dist=d;best=n;}}}
   if(best>=0)walkTo(best);
  };

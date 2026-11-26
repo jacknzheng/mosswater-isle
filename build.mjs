@@ -16,11 +16,15 @@ const missions=readdirSync(path.join(root,'missions')).filter(f=>f.endsWith('.js
  if(!Number.isInteger(offset)||offset<0||offset%2)throw Error('Mission date falls outside the two-day schedule: '+f);
  return m;
 });
+// The island is a text grid, one character per 16 pixel tile. README.md lists the characters.
+const world=JSON.parse(read('assets/world.json'));
+world.map=read('assets/map.txt').split('\n').filter(Boolean);
+if(new Set(world.map.map(row=>row.length)).size!==1)throw Error('Every row of assets/map.txt must be the same length');
 const scriptJSON=value=>JSON.stringify(value).replaceAll('<','\\u003c');
 const replacements={
- MAP_ART:data('map.webp','image/webp'), TRAINER_ART:data('trainer.png','image/png'), PIXEL_FONT:data('pixelify.ttf','font/ttf'),
+ TILE_ART:data('tiles.png','image/png'), PIXEL_FONT:data('pixelify.ttf','font/ttf'),
  CARD_DATA:read('assets/cards.json'),MISSION_DATA:scriptJSON(missions),
- '/* WORLD_DATA */':'const WORLD = '+read('assets/world.json')+';',
+ '/* WORLD_DATA */':'const WORLD = '+JSON.stringify(world)+';const TILES = '+read('assets/tiles.json')+';',
  '/* SUPABASE_SDK */':sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script'),
  '/* ISLE_GAME */':read('.build/game.js')
 };

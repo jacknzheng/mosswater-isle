@@ -54,7 +54,7 @@ async function connect(){
  if(data?.status!=="ok"||data.campaign&&!validBook(data.campaign))throw Error("Invalid cloud response");
  const row:CloudRow=data;
  let base:CloudRow|null=null;try{base=JSON.parse(localStorage.getItem(baseKey)||"null");}catch{}
- const local=fingerprint(book),hasWork=Object.values(book.runs).some(r=>r.started)||book.tile!==undefined;
+ const local=fingerprint(book),hasWork=Object.values(book.runs).some(r=>r.started)||(book.cell??book.tile)!==undefined;
  if(row.campaign){
   if(fingerprint(row.campaign)===local||base?.revision===row.revision){remember(row);}
   else if(!hasWork||base?.campaign&&fingerprint(base.campaign)===local){remember(row);restore(row.campaign);return;}
@@ -80,7 +80,7 @@ async function sendSave(){
 }
 function upload(){
  if(!device||!cloudReady||conflictRow)return Promise.resolve();
- if(!confirmed&&book.tile===undefined&&!Object.values(book.runs).some(r=>r.started))return Promise.resolve();
+ if(!confirmed&&(book.cell??book.tile)===undefined&&!Object.values(book.runs).some(r=>r.started))return Promise.resolve();
  if(!writing)writing=sendSave().finally(()=>{writing=null;});
  return writing;
 }

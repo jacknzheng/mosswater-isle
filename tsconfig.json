@@ -8,10 +8,10 @@
     "skipLibCheck": true
   },
   "files": [
-    "src/trainer.ts",
+    "src/tilemap.ts",
     "src/campaign.ts",
     "src/world.ts",
-    "src/water.ts",
+    "src/render.ts",
     "src/grading.ts",
     "src/quiz.ts",
     "src/cloud.ts",

@@ -2,7 +2,7 @@
 
 A single-player TypeScript game with an online PIN unlock and cloud saves. The Old Mill contains nine questions from the 60 minute recall deck. A player can check a draft, revise it, and submit a final answer for rubric-based feedback before reading the worked solution. The game saves locally in the browser.
 
-Use the arrow keys or WASD to walk. Click a path or a landmark to walk there. At the mill door, choose Enter mission. The hour pauses on exit or when the tab is hidden.
+Use the arrow keys or WASD to walk. Click open ground or a landmark to walk there. At the mill door, choose Enter mission. The hour pauses on exit or when the tab is hidden.
 
 ## Build
 
@@ -17,14 +17,38 @@ Open `docs/index.html` in a browser. Pass a filename to the build command to upd
 
 ## Source
 
-- `assets/world.json` holds the five-pixel navigation grid, building bounds, doors and map labels. Coordinates refer to the 960 by 1280 island in `assets/map.webp`.
-- `src/world.ts` handles keyboard movement, pathfinding, door entry and compatibility with previous saves.
-- `src/trainer.ts` draws the four-color directional trainer frames. `src/water.ts` animates the river, falls and paddle wheel.
+The island is built from 16 pixel tiles, so every part of the scene shares one pixel size and can move on its own.
+
+- `assets/map.txt` is the island: 80 rows of 60 characters, one character per tile. Edit it in any text editor and rebuild.
+- `assets/world.json` lists each landmark, the tile in front of its door, and the villagers.
+- `assets/tiles.png` is the tile sheet and `assets/tiles.json` records where each sprite sits on it. Both are drawn by code in `tools/`. Run `npm run tiles` to redraw them after changing that code. You can also edit the PNG by hand, as long as `npm run tiles` is not run afterwards.
+- `src/tilemap.ts` reads the map into walkable tiles, landmarks and scenery. `src/world.ts` handles keyboard movement, pathfinding, door entry and older saves.
+- `src/render.ts` paints three layers: moving water, the ground, and everything standing on it. Standing things are drawn from the top of the map down, so the walker passes behind treetops and in front of walls. It also runs the mill wheel, waterfall, chimney smoke, ducks, butterflies and birds.
 - `assets/cards.json` contains the original prompts and solutions with offline math. `src/quiz.ts` runs the quiz, the two interactive diagrams and the notebook.
+
+### Map characters
+
+| Character | Tile | Walkable |
+| --- | --- | --- |
+| `.` | Grass | Yes |
+| `,` | Path | Yes |
+| `~` | Water | No |
+| `#` | Rock wall | No |
+| `T` `P` `B` | Oak, pine or birch forest | No |
+| `t` `p` `b` | A single oak, pine or birch | No |
+| `o` `r` `s` | Bush, boulder, signpost | No |
+| `f` `g` | Flowers, reeds | Yes |
+| `x` `c` | Fence, crop | No |
+| `=` `D` | Bridge, dock (over water) | Yes |
+| `H` | Stairs through a rock wall | Yes |
+| `W` | Waterfall | No |
+| `l` `R` | Lily pad, rock (in water) | No |
+
+A tree also blocks the tile above it, so the walker is never fully hidden behind its crown. Edges between grass, path, water and rock are chosen automatically from the neighboring tiles.
 
 ## Play and save
 
-The public game is served from `docs/index.html` on GitHub Pages. The whole interface uses the bundled Pixelify Sans font under the SIL Open Font License, with pixel-art frames, buttons and icons drawn in CSS and inline SVG. Formulas use native math. While the game is locked, the island art shows behind the PIN prompt as a title screen. Follow the river south from the village to Birch Highlands. Two bridges connect the library, station and grotto trails.
+The public game is served from `docs/index.html` on GitHub Pages. The whole interface uses the bundled Pixelify Sans font under the SIL Open Font License, with pixel-art frames, buttons and icons drawn in CSS and inline SVG. Formulas use native math. While the game is locked, the island shows behind the PIN prompt as a title screen. Ambient motion stops when the browser asks for reduced motion. Follow the river south from the village to Birch Highlands. Two bridges connect the library, station and grotto trails.
 
 Five gray stars mark an unfinished mission. A completed quiz earns the nearest whole number to five times the average fraction of points earned per question (a full point for a legacy “Got it”), with a minimum of one. The notebook retains individual answers and self-checks.
 

@@ -116,7 +116,7 @@ function rate(result:"got"|"review"){
 function finish(){
  ending=true;state.cleared=true;state.screen="map";state.node=20;standAt(stopFor(mission));freeze();$("progress").style.width="100%";$("timer").textContent=CARDS.length+" / "+CARDS.length;$("leave").textContent="Return to island";
  paper.innerHTML='<div class="count">Checkpoint cleared</div><h2 id="qtitle">Mission cleared!</h2><p>'+starLine(ratingStars(state))+' · Your score is saved in the field notebook.</p><button class="primary" id="return">Return to island '+icon("arrow")+'</button>';
- cheer("Mission cleared","flag");const back=()=>{clearTimeout(feedbackTimer);ending=false;leave();$("flag").classList.remove("rise");requestAnimationFrame(()=>$("flag").classList.add("rise"));$("leave").onclick=leave;};
+ cheer("Mission cleared","flag");const back=()=>{clearTimeout(feedbackTimer);ending=false;leave();flagRise=performance.now();$("leave").onclick=leave;};
  $("return").onclick=back;$("leave").onclick=back;feedbackTimer=window.setTimeout(back,reduced.matches?1700:2800);focusTitle();
 }
 function openJournal(){

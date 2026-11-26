@@ -1,6 +1,7 @@
 type Card={id:number;front:string;back:string;title?:string};
 type Mission={date:string;name:string;cards:Card[]};
-type Book={version:2;active:string;tile?:number;facing?:Facing;runs:Record<string,Run>};
+// cell is the walker's tile on the 16 pixel grid. tile is the same thing from older saves, on the painted map's grid.
+type Book={version:2;active:string;cell?:number;tile?:number;facing?:Facing;runs:Record<string,Run>};
 declare const BASE_CARDS:Card[],PACKS:Mission[];
 const mill:Mission={date:"2026-11-25",name:"Old Mill",cards:BASE_CARDS};
 const missions=[mill,...PACKS];

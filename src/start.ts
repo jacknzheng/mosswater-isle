@@ -1,10 +1,9 @@
 installMap();
-size();drawHero();dock();
+size();dock();
 window.addEventListener("resize",size);
-if(art.complete&&art.naturalWidth)prepareWater();else art.addEventListener("load",prepareWater,{once:true});
+if(sheet.complete&&sheet.naturalWidth)prepareWorld();else sheet.addEventListener("load",prepareWorld,{once:true});
 requestAnimationFrame(mapFrame);
 lockScreen();
 
-trainerSheet.addEventListener("load",drawHero);
 connect().catch(reportCloud);
 setInterval(()=>{if(!popup.open&&!account.open&&!walking&&!leg&&entryTime===null)dock();},60000);
