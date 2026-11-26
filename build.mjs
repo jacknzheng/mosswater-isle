@@ -8,7 +8,7 @@ const read=name=>readFileSync(path.join(root,name),'utf8');
 const data=(name,mime)=>'data:'+mime+';base64,'+readFileSync(path.join(root,'assets',name)).toString('base64');
 mkdirSync(path.join(root,'.build'),{recursive:true});
 execFileSync(process.execPath,[path.join(root,'node_modules/typescript/bin/tsc'),'-p',root],{stdio:'inherit'});
-const sdk=await build({stdin:{contents:"import {createClient} from '@supabase/supabase-js'; window.mosswaterClient=createClient('https://usgospjdknxcpxxeywgl.supabase.co','sb_publishable_sXmidmqHvALUBplbRBz2bg_6Laxki0I',{auth:{detectSessionInUrl:location.protocol==='https:',flowType:location.protocol==='https:'?'pkce':'implicit',storageKey:'mosswater-auth-v1'}});",resolveDir:root},bundle:true,minify:true,write:false,format:'iife',target:'es2020',legalComments:'inline'});
+const sdk=await build({stdin:{contents:"import {createClient} from '@supabase/supabase-js'; window.mosswaterClient=createClient('https://usgospjdknxcpxxeywgl.supabase.co','sb_publishable_sXmidmqHvALUBplbRBz2bg_6Laxki0I',{auth:{detectSessionInUrl:false,persistSession:false,autoRefreshToken:false,storageKey:'mosswater-public-client'}});",resolveDir:root},bundle:true,minify:true,write:false,format:'iife',target:'es2020',legalComments:'inline'});
 const missions=readdirSync(path.join(root,'missions')).filter(f=>f.endsWith('.json')).sort().map(f=>{
  const m=JSON.parse(read('missions/'+f));
  if(!/^\d{4}-\d{2}-\d{2}\.json$/.test(f)||m.date!==f.slice(0,10)||!m.name||!m.cards?.length||!m.cards.every(c=>Number.isSafeInteger(c.id)&&c.title&&typeof c.front==='string'&&typeof c.back==='string')||new Set(m.cards.map(c=>c.id)).size!==m.cards.length)throw Error('Invalid mission: '+f);

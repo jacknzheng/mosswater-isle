@@ -1,6 +1,6 @@
 # Mosswater Isle
 
-A single-player, offline TypeScript game. The Old Mill contains nine questions from the 60 minute recall deck. A player writes an answer, reads the worked solution and records a self-check. The game saves locally in the browser.
+A single-player TypeScript game with an online PIN unlock and cloud saves. The Old Mill contains nine questions from the 60 minute recall deck. A player writes an answer, reads the worked solution and records a self-check. The game saves locally in the browser.
 
 Use the arrow keys or WASD to walk. Click a path or a landmark to walk there. At the mill door, choose Enter mission. The hour pauses on exit or when the tab is hidden.
 
@@ -28,7 +28,9 @@ The public game is served from `docs/index.html` on GitHub Pages. The map uses t
 
 Five gray stars mark an unfinished mission. A completed quiz earns the nearest whole number to five times the fraction marked “Got it”, with a minimum of one. The notebook retains individual answers and self-checks.
 
-The Supabase JavaScript SDK supports the project’s default one-time sign-in links and optional numeric email codes. Hosted links return to the game. To transfer offline progress, request an email from the local game and paste the original link there. To provision a project, run `supabase/001_game_saves.sql` in its SQL editor, enable email authentication, and allow the exact hosted return URL. For numeric codes, include `{{ .Token }}` in the Magic Link and Confirm signup email templates. Keep any existing links used by other applications. The public client uses the project's publishable key. Database policies restrict each row to its signed-in owner. When two devices change a save independently, the passport asks which copy to keep.
+The game opens with a six-digit trainer PIN for a single shared profile. The Supabase JavaScript SDK exchanges it for a random device session lasting 30 days. The database stores a bcrypt PIN verifier and hashed session tokens in a private schema. After five wrong PIN guesses the profile pauses unlock attempts for 15 minutes. A remembered browser checks its session with the server when reopening the game. The passport’s **Lock game** clears the browser token and requests server revocation. During an unlocked session, progress is cached locally and synchronized with revision checks.
+
+Provisioning uses the SQL migrations in order. Configure the PIN verifier privately in the project’s SQL editor. Keep the PIN, verifier, and device tokens outside version control. The second migration can carry forward one previous email-account save and stops if it finds multiple saves.
 
 ## Publish a scheduled mission
 

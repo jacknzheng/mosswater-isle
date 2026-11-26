@@ -154,7 +154,7 @@ function animateDoor(now:number){
 }
 function mapFrame(now:number){
  const dt=lastTime?Math.min(48,now-lastTime):0;lastTime=now;
- if(!popup.open&&!document.hidden){
+ if(unlockedGame&&!popup.open&&!document.hidden){
   if(entryTime!==null)animateDoor(now);
   else if(leg||path.length||held.length||walking)updateWalk(dt);
   paintWater(now);
