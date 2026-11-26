@@ -1,4 +1,3 @@
-declare const CARDS:{id:number;front:string;back:string}[];
 type Point=[number,number];
 type Place={name:string;door:Point;pin:Point;box:[number,number,number,number]};
 declare const WORLD:{width:number;height:number;cell:number;rows:string[];places:Place[]};
@@ -12,16 +11,29 @@ const {width:W,height:H,cell,rows,places}=WORLD,cols=rows[0].length;
 const tileAt=(x:number,y:number)=>Math.floor(y/cell)*cols+Math.floor(x/cell);
 const center=(id:number):Point=>[(id%cols)*cell+2,Math.floor(id/cols)*cell+2];
 const openTile=(id:number)=>Number.isInteger(id)&&id>=0&&rows[Math.floor(id/cols)]?.[id%cols]===".";
+// Later sessions get their own trail marker and save, even after all buildings have missions.
+const lastAssigned=Math.max(6,...missions.map(stopFor));
+if(lastAssigned>=6&&PACKS.length){
+ const trail:number[]=[];
+ for(let y=2;y<rows.length-2;y+=2)for(let x=2;x<cols-2;x+=2)if(rows[y][x]===".")trail.push(y*cols+x);
+ for(let index=places.length;index<=lastAssigned+1;index++){
+  let candidate=-1;
+  for(const spacing of [54,34,19,8,4]){
+   const start=(index*593)%trail.length;
+   for(let j=0;j<trail.length;j++){
+    const id=trail[(start+j)%trail.length],p=center(id);
+    if(places.every(loc=>Math.hypot(loc.door[0]-p[0],loc.door[1]-p[1])>=spacing)){candidate=id;break;}
+   }
+   if(candidate>=0)break;
+  }
+  if(candidate<0)break;
+  const door=center(candidate);places.push({name:"Trail camp "+(index-1),door,pin:[door[0],door[1]-8],box:[door[0]-6,door[1]-8,12,10]});
+ }
+}
 const doors=places.map(p=>tileAt(...p.door));
-const storeKey="trailbound.mosswater.mill.v1";
-let state:Run={node:0,screen:"map",started:false,cleared:false,remaining:3600000,entries:CARDS.map(c=>({card:c.id,answer:"",submitted:false,rating:null}))};
-try{
- const raw=localStorage.getItem(storeKey);
- if(raw){const s:Run=JSON.parse(raw);if(Number.isFinite(s.remaining)&&s.entries?.length===CARDS.length&&s.entries.every((e,i)=>e.card===CARDS[i].id&&typeof e.answer==="string"&&[null,"got","review"].includes(e.rating)))state=s;}
-}catch{}
 const legacyStop=state.node===20||state.screen==="quiz"?1:state.node===42?2:state.node===56?3:0;
-let tile=state.tile!==undefined&&openTile(state.tile)?state.tile:doors[legacyStop];
-let here:Point=center(tile),facing:Facing=state.facing??"south",stride=0,walking=false;
+let tile=book.tile!==undefined&&openTile(book.tile)?book.tile:doors[legacyStop];
+let here:Point=center(tile),facing:Facing=book.facing??state.facing??"south",stride=0,walking=false;
 let deadline:number|null=null,reading=false,ending=false,feedbackTimer=0;
 let path:number[]=[],goal=-1,leg:{from:Point;to:number;distance:number}|null=null,entryTime:number|null=null;
 const keyDirections:Record<string,Facing>={arrowup:"north",w:"north",arrowdown:"south",s:"south",arrowleft:"west",a:"west",arrowright:"east",d:"east"};
@@ -32,41 +44,56 @@ const fx=$("waterfx") as HTMLCanvasElement;fx.width=W;fx.height=H;
 const water=fx.getContext("2d")!;
 const waterFrames:HTMLCanvasElement[]=[];
 let waterFrame=-1,lastTime=0,lastDock=-2,entryOpen=0,irisRadius=-1,heroFrame="";
-function write(){state.tile=tile;state.facing=facing;try{localStorage.setItem(storeKey,JSON.stringify(state));$("warn").hidden=true;}catch{$("warn").hidden=false;$("warn").textContent="Saving is unavailable in this browser. Keep this tab open to retain your session.";}}
+function write(){state.tile=tile;state.facing=facing;try{book.runs[mission.date]=state;book.active=mission.date;book.tile=tile;book.facing=facing;localStorage.setItem(bookKey,JSON.stringify(book));queueCloud();$("warn").hidden=true;}catch{$("warn").hidden=false;$("warn").textContent="Saving is unavailable in this browser. Keep this tab open to retain your session.";}}
 const minutes=(ms:number)=>{const n=Math.ceil(Math.max(0,ms)/1000);return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");};
 const current=()=>state.entries.findIndex(e=>!e.rating);
 function elapsed(){if(deadline!==null)state.remaining=Math.max(0,deadline-Date.now());}
 function atPlace(){return doors.indexOf(tile);}
 function standAt(i:number){tile=doors[i];here=center(tile);facing="south";leg=null;path=[];goal=-1;walking=false;drawHero();}
 function pinXY(el:HTMLElement|SVGElement,p:Point){el.style.left=(100*p[0]/W)+"%";el.style.top=(100*p[1]/H)+"%";}
-function size(){const w=Math.max(view.clientWidth,view.clientHeight*W/H);board.style.width=w+"px";board.style.height=Math.max(view.clientHeight,w/1.9)+"px";camera();}
+function size(){const w=Math.max(view.clientWidth,view.clientHeight*W/640);board.style.width=w+"px";board.style.height=2*Math.max(view.clientHeight,w/1.9)+"px";camera();}
 function camera(){
  if(board.clientWidth>view.clientWidth+2)view.scrollLeft=board.clientWidth*here[0]/W-view.clientWidth*.48;
  if(board.clientHeight>view.clientHeight+2)view.scrollTop=board.clientHeight*here[1]/H-view.clientHeight*.55;
 }
 function drawHero(){
  const index=walking?Math.floor(stride/3.5)%4:0,frame=facing+index;
- if(frame!==heroFrame){hc.clearRect(0,0,22,26);hc.drawImage(trainerAtlas.get(facing)![index],0,0);heroFrame=frame;}
+ if(frame!==heroFrame){if(trainerSheet.complete&&trainerSheet.naturalWidth){hc.clearRect(0,0,36,46);hc.drawImage(trainerSheet,[1,0,1,2][index]*36,spriteRow[facing]*46,36,46,0,0,36,46);heroFrame=frame;}}
  pinXY(hero,here);
 }
 function dock(){
  const which=atPlace(),p=places[which];lastDock=which;
  let title=p?.name??"Woodland trail",text="",btn="",action=()=>walkTo(doors[1]);
- if(which===1){
-  if(state.cleared){title="Old Mill cleared";text="Your field notebook holds all nine encounters.";btn="Open field notebook";action=openJournal;}
-  else if(state.started&&state.remaining<=0){text="Your work from this hour is saved.";btn="View session";action=openJournal;}
-  else{text="60 minute recall · 9 questions"+(state.started?" · "+minutes(state.remaining)+" left":"");btn=state.started?"Resume mission →":"Enter mission →";action=enterDoor;}
- }else if(which>1){text="A future mission will open here.";btn="Walk to the Old Mill →";}
- else{text=state.cleared?"Choose a landmark to explore.":"Your first quiz awaits at the Old Mill.";btn="Walk to the Old Mill →";}
- $("dock").innerHTML='<div class="eyebrow">'+(which===1?"Checkpoint 01":which>1?"Future checkpoint":"Island map")+'</div><h2>'+title+'</h2><p>'+text+'</p><div class="actions"><button class="primary" id="action">'+btn+'</button></div><p class="keys">Arrow keys or WASD to walk · Click a destination</p>';
- $("action").onclick=action;$("flags").textContent=(state.cleared?"1":"0")+" / 1 cleared";
- $("flag").toggleAttribute("hidden",!state.cleared);pinXY($("flag"),[588,302]);$("pin1").classList.toggle("cleared",state.cleared);
+ const offered=which>0?availableAt(which):[];
+ const latest=offered.at(-1);
+ if(latest){
+  const run=book.runs[latest.date];title=latest.name;
+  if(run?.cleared){text="Completed · "+run.entries.filter(e=>e.rating==="got").length+" / "+run.entries.length+" correct";btn="Open field notebook";action=()=>{selectMission(latest);openJournal();};}
+  else if(run?.started&&run.remaining<=0){text="Your work from this hour is saved.";btn="View session";action=()=>{selectMission(latest);openJournal();};}
+  else{text="60 minute recall · "+latest.cards.length+" questions";btn=run?.started?"Resume mission →":"Enter mission →";action=()=>{selectMission(latest);enterDoor();};}
+ }else if(which>1){const date=nextDate(which);title=p.name+" · Locked";text=unlocked(date)?"This mission is awaiting its quiz.":"Opens "+dateLabel(date)+" at 9 a.m. Pacific.";btn="Return to the mill";action=()=>walkTo(doors[1]);}
+ else{text="Choose a checkpoint or explore the Birch Highlands to the south.";btn="Walk to the Old Mill →";}
+ $("dock").innerHTML='<div class="eyebrow">'+(which===1?"Checkpoint 01":which>1?"Future checkpoint":"Island map")+'</div><h2>'+title+'</h2>'+(which>0?starLine(ratingStars(latest?book.runs[latest.date]:undefined)):'')+'<p>'+text+'</p><div class="actions"><button class="primary" id="action">'+btn+'</button></div><p class="keys">Arrow keys or WASD to walk · Click a destination</p>';
+ $("action").onclick=action;
+ for(const older of offered.slice(0,-1).reverse()){
+  const btn=document.createElement("button");btn.className="secondary";btn.textContent=older.name+" · "+dateLabel(older.date)+" · "+ratingStars(book.runs[older.date])+"/5";
+  btn.onclick=()=>{selectMission(older);if(state.cleared)openJournal();else enterDoor();};$("dock").append(btn);
+ }
+ $("flags").textContent=Object.values(book.runs).filter(r=>r.cleared).length+" / "+missions.filter(m=>m===mill||unlocked(m.date)).length+" cleared";
+ for(let i=1;i<places.length;i++){
+  const m=availableAt(i).at(-1),pin=$("pin"+i);
+  pin.classList.toggle("locked",!m);pin.classList.toggle("available",!!m);
+  const label=pin.querySelector("label")!;label.textContent=(m?"⚑ ":"🔒 ")+(m?.name??places[i].name);
+  label.insertAdjacentHTML("beforeend",starLine(ratingStars(m?book.runs[m.date]:undefined)));
+ }
+ $("flag").toggleAttribute("hidden",!book.runs[mill.date]?.cleared);pinXY($("flag"),[588,302]);
+ $("region-name").textContent=here[1]>=640?"Birch Highlands":"Mosswater Isle";
 }
 function neighbors(id:number){
  return [id+1,id-1,id+cols,id-cols].filter(n=>openTile(n)&&Math.abs(n%cols-id%cols)<=1);
 }
 function walkTo(target:number){
- if(popup.open||entryTime!==null||ending||!openTile(target))return;
+ if(account.open||popup.open||entryTime!==null||ending||!openTile(target))return;
  held.length=0;
  const start=leg?.to??tile;
  const parents=new Map<number,number>([[start,-1]]),queue=[start];
@@ -105,24 +132,24 @@ function updateWalk(dt:number){
  }
 }
 function enterDoor(){
- if(atPlace()!==1||entryTime!==null||popup.open)return;
+ if(atPlace()!==stopFor(mission)||entryTime!==null||popup.open)return;
  held.length=0;path=[];goal=-1;leg=null;facing="north";stride=0;walking=false;
- entryTime=performance.now();$("dock").innerHTML='<div class="eyebrow">Checkpoint 01</div><h2>Entering the Old Mill…</h2>';
+ entryTime=performance.now();$("dock").innerHTML='<div class="eyebrow">Checkpoint 01</div><h2>Entering '+places[atPlace()].name+'…</h2>';
 }
 function animateDoor(now:number){
  const t=reduced.matches?1.4:(now-entryTime!)/1000;
  entryOpen=Math.min(1,t/.26);
  const walk=Math.max(0,Math.min(1,(t-.24)/.58));
- walking=walk>0&&walk<1;stride=walk*18;here=[547,337-walk*15];drawHero();
+ walking=walk>0&&walk<1;stride=walk*18;const door=places[stopFor(mission)].door;here=[door[0],door[1]-walk*15];drawHero();
  hero.style.opacity=String(Math.min(1,(1-walk)*3));hero.style.clipPath="inset("+Math.max(0,walk-.45)*90+"% 0 0 0)";
  const iris=$("iris");
  if(t>.7){
-  const pos=board.getBoundingClientRect(),x=pos.left+547/W*pos.width,y=pos.top+320/H*pos.height;
+  const pos=board.getBoundingClientRect(),x=pos.left+door[0]/W*pos.width,y=pos.top+(door[1]-17)/H*pos.height;
   irisRadius=Math.max(0,1-(t-.7)/.51)*Math.hypot(innerWidth,innerHeight);
   iris.hidden=false;iris.style.background='radial-gradient(circle at '+x+'px '+y+'px,transparent '+irisRadius+'px,#192c29 '+(irisRadius+2)+'px)';
  }
  if(t>=1.23){
-  entryTime=null;entryOpen=0;iris.hidden=true;hero.style.clipPath="";hero.style.opacity="1";standAt(1);waterFrame=-1;enter();
+  entryTime=null;entryOpen=0;iris.hidden=true;hero.style.clipPath="";hero.style.opacity="1";standAt(stopFor(mission));waterFrame=-1;enter();
  }
 }
 function mapFrame(now:number){
@@ -148,10 +175,10 @@ function installMap(){
   if(best>=0)walkTo(best);
  };
  window.addEventListener("keydown",e=>{
-  if(popup.open||entryTime!==null||ending||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(account.open||popup.open||entryTime!==null||ending||e.ctrlKey||e.metaKey||e.altKey)return;
   const key=e.key.toLowerCase();
   if(keyDirections[key]){e.preventDefault();if(!held.includes(key)){held.push(key);path=[];goal=-1;}return;}
-  if((key==="enter"||key===" ")&&atPlace()===1&&!e.repeat&&!(document.activeElement instanceof HTMLButtonElement)){e.preventDefault();$("action")?.click();}
+  if((key==="enter"||key===" ")&&atPlace()>0&&!e.repeat&&!(document.activeElement instanceof HTMLButtonElement)){e.preventDefault();$("action")?.click();}
  });
  window.addEventListener("keyup",e=>{const i=held.indexOf(e.key.toLowerCase());if(i>=0)held.splice(i,1);});
  window.addEventListener("blur",()=>{held.length=0;});

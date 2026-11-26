@@ -1,11 +1,11 @@
 // Composite the flowing texture only onto blue water pixels. The original bank,
 // bridge planks, stones and lily pads remain visible above the surface.
 function prepareWater(){
- const buffer=document.createElement("canvas");buffer.width=W;buffer.height=H;
+ const buffer=document.createElement("canvas");buffer.width=W;buffer.height=640;
  const ctx=buffer.getContext("2d",{willReadFrequently:true})!;
- ctx.drawImage(art,0,0,W,H);const source=ctx.getImageData(0,0,W,H).data;
- const mask=new Uint8Array(W*H),pixels:number[]=[];
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ ctx.drawImage(art,0,0,W,640);const source=ctx.getImageData(0,0,W,640).data;
+ const mask=new Uint8Array(W*640),pixels:number[]=[];
+ for(let y=0;y<640;y++)for(let x=0;x<W;x++){
   const inRiver=(x>235&&x<567&&(y>335||x<459||y>268&&y<361))||(x>=195&&x<280&&y>438&&y<552);
   if(!inRiver)continue;
   const p=y*W+x,k=p*4,r=source[k],g=source[k+1],b=source[k+2];
@@ -13,8 +13,8 @@ function prepareWater(){
  }
  const count=12;
  for(let frame=0;frame<count;frame++){
-  const layer=document.createElement("canvas");layer.width=W;layer.height=H;
-  const out=layer.getContext("2d")!,image=out.createImageData(W,H),target=image.data;
+  const layer=document.createElement("canvas");layer.width=W;layer.height=640;
+  const out=layer.getContext("2d")!,image=out.createImageData(W,640),target=image.data;
   const phase=frame/count,phaseB=(phase+.5)%1;
   const weight=1-Math.abs(2*phase-1);
   for(const p of pixels){
@@ -54,10 +54,10 @@ function paintWater(now:number){
  const frame=reduced.matches?0:Math.floor(now/80)%waterFrames.length;
  if(frame===waterFrame&&entryTime===null)return;
  waterFrame=frame;water.clearRect(0,0,W,H);water.drawImage(waterFrames[frame],0,0);
- if(entryTime!==null){
+ if(entryTime!==null&&stopFor(mission)===1){
   const x=538,y=313,w=17,h=19;
   water.fillStyle="#211f25";water.fillRect(x,y,w,h);water.fillStyle="#312b2a";water.fillRect(x+2,y+4,w-3,h-4);
   const width=Math.round(w*(1-entryOpen));
-  if(width>0)water.drawImage(art,x*art.naturalWidth/W,y*art.naturalHeight/H,w*art.naturalWidth/W,h*art.naturalHeight/H,x,y,width,h);
+  if(width>0)water.drawImage(art,x*art.naturalWidth/W,y*art.naturalHeight/640,w*art.naturalWidth/W,h*art.naturalHeight/640,x,y,width,h);
  }
 }

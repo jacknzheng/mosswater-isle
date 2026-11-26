@@ -1,9 +1,19 @@
 {
   "compilerOptions": {
     "strict": true,
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "none",
-    "outFile": ".build/game.js"
+    "outFile": ".build/game.js",
+    "moduleResolution": "node",
+    "skipLibCheck": true
   },
-  "files": ["src/trainer.ts", "src/world.ts", "src/water.ts", "src/quiz.ts", "src/start.ts"]
+  "files": [
+    "src/trainer.ts",
+    "src/campaign.ts",
+    "src/world.ts",
+    "src/water.ts",
+    "src/quiz.ts",
+    "src/cloud.ts",
+    "src/start.ts"
+  ]
 }
