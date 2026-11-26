@@ -1,0 +1,3 @@
+[functions.grade-answer]
+# The function verifies a Mosswater PIN session before calling the model.
+verify_jwt = false
