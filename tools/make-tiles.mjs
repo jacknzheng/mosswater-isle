@@ -1,230 +1,319 @@
 // Draws the Mosswater tileset and writes assets/tiles.png and assets/tiles.json.
-// Run with `npm run tiles`. Everything is original art drawn by the code below.
+// Run with `npm run tiles`. Tiles are 32 pixels. Everything is original art drawn by the code below.
 import {writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {C,rng,hash,Sheet,Atlas} from './pixel.mjs';
+import {C,rng,hash,tone,Sheet,Atlas} from './pixel.mjs';
 import {addBuildings} from './buildings.mjs';
 import {addActors} from './actors.mjs';
 
-const atlas=new Atlas(512);
+const T=32,Q=16;
+const atlas=new Atlas(1024);
 const add=(name,sheet,meta)=>atlas.add(name,sheet,meta);
-const pick=(value,stops,colors)=>{for(let i=0;i<stops.length;i++)if(value<stops[i])return colors[i];return colors[colors.length-1];};
+const SHADOW='#10281c55';
 
 // ---------- Ground ----------
-const GRASS={base:'#67ba4b',dark:'#4c9f40',light:'#86d05e',deep:'#3f8a3b'};
+const GRASS=['#357c45','#4b9f45','#6abf4b','#8fd45c','#bbe971'];
 for(let v=0;v<6;v++){
- const t=new Sheet(16,16).fill(GRASS.base),r=rng(40+v);
- for(let i=0;i<3+v%3;i++){const x=r(15),y=r(14);t.set(x,y,GRASS.dark);t.set(x,y+1,GRASS.dark);t.set(x+1,y,GRASS.light);}
- for(let i=0;i<2;i++)t.set(r(16),r(16),GRASS.light);
- if(v===3){t.set(6,9,GRASS.deep);t.set(7,8,GRASS.deep);t.set(8,9,GRASS.deep);t.set(7,10,GRASS.dark);}
- if(v===4)for(const[x,y]of[[4,5],[5,4],[6,5],[11,11],[12,10],[13,11]]){t.set(x,y,GRASS.light);t.set(x,y+1,GRASS.dark);}
- if(v===5){t.rect(3,9,3,2,GRASS.dark).rect(9,3,4,2,GRASS.dark).set(4,8,GRASS.dark);t.set(10,2,GRASS.dark);t.set(12,5,GRASS.light);}
+ const t=new Sheet(T,T).fill(GRASS[2]),r=rng(60+v);
+ const blade=(x,y,c,len,lean)=>{for(let i=0;i<len;i++)t.set((x+(i>=len-1?lean:0)+T)%T,(y-i+T)%T,c);};
+ for(let i=0;i<9+v;i++){const x=r(T),y=r(T);blade(x,y,GRASS[1],2+r(2),r(3)-1);t.set((x+1)%T,(y+T-1)%T,GRASS[3]);}
+ for(let i=0;i<6;i++)t.set(r(T),r(T),GRASS[3]);
+ if(v===3||v===5)for(let k=-2;k<=2;k++){const x=10+v*2+k*2,y=20-v+Math.abs(k),len=5-Math.abs(k);blade(x,y,k%2?GRASS[0]:GRASS[1],len,Math.sign(k));t.set(x+Math.sign(k),y-len,GRASS[4]);}
+ if(v===4)for(const[x,y]of[[7,9],[10,7],[12,10],[22,22],[25,20]]){t.rect(x,y,2,2,GRASS[3]);t.set(x,y,GRASS[4]);t.set(x+1,y+2,GRASS[1]);}
  add('grass_'+v,t);
 }
 
-// Terrain edges are built from 8 pixel quarter tiles. Each block is 40 by 32:
+// Terrain edges are built from 16 pixel quarter tiles. Each block is 80 by 64:
 // five edge states across (outer corner, side edge, top or bottom edge, inner corner, full)
 // and the four corners of a tile down (top left, top right, bottom left, bottom right).
-function auto(name,paint,{m=0,r=3}={}){
- const s=new Sheet(40,32);
+// Straight edges wander a pixel in or out so banks and paths do not look ruled.
+const BUMP=[[0,0,1,1,1,0,-1,-1,0,0,1,0,0,-1,0,0],[0,1,1,0,0,-1,-1,-1,0,0,0,1,1,0,0,0],[0,0,-1,-1,0,1,1,0,0,0,-1,0,1,1,0,0],[0,-1,0,0,1,1,1,0,-1,-1,0,0,0,1,0,0]];
+function auto(name,paint,{m=0,r=6,wobble=1}={}){
+ const s=new Sheet(5*Q,4*Q);
  for(let corner=0;corner<4;corner++){
   const right=corner&1,bottom=corner>>1;
-  for(let state=0;state<5;state++)for(let py=0;py<8;py++)for(let px=0;px<8;px++){
-   const X=right?8+px:px,Y=bottom?8+py:py,u=right?15.5-X:X+.5,v=bottom?15.5-Y:Y+.5;
+  for(let state=0;state<5;state++)for(let py=0;py<Q;py++)for(let px=0;px<Q;px++){
+   const X=right?Q+px:px,Y=bottom?Q+py:py,u=right?T-.5-X:X+.5,v=bottom?T-.5-Y:Y+.5;
    let d=99;
    if(state===0)d=u<m+r&&v<m+r?r-Math.hypot(m+r-u,m+r-v):Math.min(u-m,v-m);
-   else if(state===1)d=u-m;
-   else if(state===2)d=v-m;
+   else if(state===1)d=u-m+wobble*BUMP[corner][py];
+   else if(state===2)d=v-m+wobble*BUMP[(corner+2)%4][px];
    else if(state===3)d=Math.hypot(u,v)-m-.5;
    const c=paint(d,X,Y,{u,v,right,bottom,state,north:!bottom&&(state===2||state===0&&v<=u),south:!!bottom&&(state===2||state===0&&v<=u)});
-   if(c)s.set(state*8+px,corner*8+py,c);
+   if(c)s.set(state*Q+px,corner*Q+py,c);
   }
  }
  return add(name,s);
 }
 
-const SAND=['#ecd193','#f6e2b0','#d7b374'];
-const sand=(X,Y,v)=>{const h=hash(X,Y,7+v);return h<.045?SAND[2]:h<.085?SAND[1]:SAND[0];};
-for(let v=0;v<3;v++)add('sand_'+v,new Sheet(16,16).each((x,y)=>sand(x,y,v)));
-auto('path',(d,X,Y)=>d<-1?0:d<0?GRASS.dark:d<1?'#a47b48':d<2?'#cfa96b':sand(X,Y,0),{m:1,r:3});
+const SAND=['#cfa86c','#dcbb7e','#ecd092','#f9e9bf'];
+function sand(X,Y,v){
+ const pebble=hash(X>>1,Y>>1,7+v);
+ if(pebble<.028)return(X&1)+(Y&1)===0?SAND[3]:(X&1)+(Y&1)===2?SAND[0]:SAND[1];
+ const h=hash(X,Y,17+v);return h<.03?SAND[1]:h<.05?SAND[3]:SAND[2];
+}
+for(let v=0;v<3;v++)add('sand_'+v,new Sheet(T,T).each((x,y)=>sand(x,y,v)));
+auto('path',(d,X,Y)=>d<-2?0:d<0?(hash(X,Y,3)<.7?GRASS[1]:0):d<1.5?'#8a5f38':d<3?'#b98a54':d<5?(hash(X,Y,4)<.45?SAND[0]:SAND[1]):sand(X,Y,0),{m:3,r:7});
 
 // Water sits on a canvas below the ground. The mask cuts the hole and the rim draws the bank.
-auto('water_mask',d=>d>=0?'#000000':0,{m:0,r:5});
+auto('water_mask',d=>d>=0?'#000000':0,{m:0,r:10});
 auto('water_rim',(d,X,Y,q)=>{
  if(d<0)return 0;
- if(d<1)return'#6f4f2e';
- if(q.north)return d<3?(hash(X,Y,2)<.2?'#8f6a3f':'#a98050'):d<4.2?'#1b5fb899':0;
- return d<2.2?'#c9a468':d<3.2&&hash(X,Y,3)<.7?'#e4f6ff':0;
-},{m:0,r:5});
-const WATER=['#2f88df','#59abef','#2372cd','#bfe6ff'];
+ if(d<1.5)return'#5a3f28';
+ if(q.north){// The far bank is a low earth wall with its shadow on the water.
+  if(d<3)return'#b98f5c';
+  if(d<8)return hash(X>>1,Y,2)<.22?'#6f5034':hash(X,Y,5)<.12?'#a47b4c':'#8a6540';
+  if(d<9)return'#5a3f28';
+  return d<12?'#15509f8c':d<14?'#15509f4a':0;
+ }
+ if(d<4)return hash(X,Y,6)<.2?'#b98a54':'#d2ad72';
+ if(d<5.5)return'#b98a54';
+ if(d<7.5)return hash(X>>1,Y>>1,3)<.72?'#eefaff':0;
+ return d<12?'#9fd8ff4d':d<15?'#9fd8ff26':0;
+},{m:0,r:10});
+const WATER=['#1f66c4','#2f86de','#4ba1ea','#84c6f6'];
 for(let f=0;f<4;f++){
- const t=new Sheet(32,32).fill(WATER[0]);
+ const t=new Sheet(64,64).fill(WATER[1]);
  for(let row=0;row<4;row++)for(let k=0;k<3;k++){
-  const y=(row*8+f*2)%32,x=(k*11+row*5+(row%2?4:0))%32,len=3+((k+row)%3);
-  for(let i=0;i<len;i++){t.set((x+i)%32,y,WATER[1]);if(i>0&&i<len-1&&(k+row)%2===0)t.set((x+i)%32,(y+31)%32,WATER[1]);}
-  for(let i=0;i<2+(k%2);i++)t.set((x+14+i)%32,(y+4)%32,WATER[2]);
+  const y=(row*16+f*4+(k*5)%7)%64,x=(k*21+row*13+(row%2?10:0))%64,half=3+((k+row)%3);
+  for(let i=-half;i<=half;i++){
+   const dip=Math.round(i*i/(half*1.6));
+   t.set((x+i+64)%64,(y+dip)%64,WATER[2]);
+   if(Math.abs(i)<half-1)t.set((x+i+64)%64,(y+dip+63)%64,WATER[3]);
+  }
+  for(let i=0;i<4+(k%2)*2;i++)t.set((x+30+i)%64,(y+9)%64,WATER[0]);
  }
  add('water_'+f,t);
 }
 
-const ROCK=['#9c7757','#bf9b76','#74543f','#4b332a'];
-// Fitted stones in three staggered courses that repeat every tile.
-const stone=(X,Y)=>{
- const y=Y%16,course=y<5?0:y<11?1:2,ry=y-[0,5,11][course],height=[5,6,5][course],x=(X+[0,4,2][course])%8;
- if(ry===height-1||x===7)return ROCK[2];
- if(ry===0||x===0)return ROCK[1];
- return hash(X,Y,11)<.1?ROCK[1]:ROCK[0];
-};
+// Rock is a wall of fitted stones. The pattern repeats every tile.
+const ROCK=['#3b2925','#594035','#775845','#96745a','#b59470','#d1b48c'];
+const SEEDS=[];
+for(let gy=0;gy<4;gy++)for(let gx=0;gx<4;gx++)SEEDS.push([gx*8+2+hash(gx,gy,90)*5,gy*8+2+hash(gx,gy,91)*5,hash(gx,gy,92)]);
+function stone(X,Y){
+ let near=1e9,next=1e9,best=SEEDS[0],lx=0,ly=0;
+ for(const s of SEEDS){
+  let dx=((X-s[0])%T+T)%T;if(dx>T/2)dx-=T;
+  let dy=((Y-s[1])%T+T)%T;if(dy>T/2)dy-=T;
+  const d=Math.hypot(dx,dy*1.25);
+  if(d<near){next=near;near=d;best=s;lx=dx;ly=dy;}else if(d<next)next=d;
+ }
+ if(next-near<1.3)return ROCK[1];
+ return tone(ROCK.slice(2),.42+best[2]*.3-lx*.035-ly*.06+(hash(X,Y,11)-.5)*.12);
+}
 auto('rock',(d,X,Y,q)=>{
  if(d<0)return 0;
- if(d<1)return ROCK[3];
- if(q.south&&q.v<8)return q.v<2||X%4===1&&q.v<7?ROCK[3]:q.v>=7?ROCK[3]:hash(X,Y,5)<.15?ROCK[0]:ROCK[2];
- if(q.north&&q.v<2)return ROCK[1];
+ if(d<1.3)return ROCK[0];
+ if(q.south&&q.v<15){
+  if(q.v<3)return ROCK[0];
+  if(q.v>=13)return ROCK[4];
+  const crack=hash(X,3,5)<.16||hash(X>>1,Math.floor(q.v/4),6)<.1;
+  return crack?ROCK[0]:hash(X>>1,Math.floor(q.v/3),7)<.3?ROCK[2]:ROCK[1];
+ }
+ if(q.north&&q.v<3.2)return q.v<2.2?ROCK[5]:ROCK[4];
  return stone(X,Y);
-},{m:0,r:3});
-add('stairs',new Sheet(16,16).each((x,y)=>x===0||x===15?'#5d5f66':x===1||x===14?'#8a8c90':y%4===0?'#e3e4e0':y%4===3?'#6f7177':'#bdbfbc'));
-add('soil',new Sheet(16,16).each((x,y)=>y%4===3?'#6b4426':hash(x,y,21)<.1?'#a8733f':'#8f5e33'));
-add('deck',new Sheet(16,16).each((x,y)=>x%4===3?'#7a4e2a':y===0||y===15?'#8a5a30':hash(x>>2,y>>2,31)<.3?'#c18c52':'#b07a44'));
-add('rail',new Sheet(16,10).each((x,y)=>{
- if(x>=6&&x<=9)return y===0?'#e0ad6e':x===6||x===9||y===9?'#5f3b1e':'#b07a44';
- if(y===2||y===6)return'#5f3b1e';if(y===3)return'#d39c5e';if(y===4||y===5)return'#9a6836';
+},{m:0,r:6});
+add('stairs',new Sheet(T,T).each((x,y)=>{
+ const step=y%8;
+ if(x<2||x>29)return'#4f5158';
+ if(x<5||x>26)return step===0?'#a9abab':'#7b7d83';
+ return step<1?'#f1f1ec':step<5?(hash(x>>2,y>>3,41)<.2?'#c9cbc7':'#d7d8d3'):step<7?'#8f9196':'#63656d';
 }));
+add('soil',new Sheet(T,T).each((x,y)=>{const f=y%8;return f===7?'#5c3a22':f===0?'#a9733f':hash(x,y,21)<.1?'#a9733f':hash(x,y,22)<.08?'#6b4426':'#8a5a31';}));
+add('deck',new Sheet(T,T).each((x,y)=>{
+ const plank=x%8,grain=hash(x>>3,y>>2,31);
+ if(plank===7)return'#5a3a20';
+ if(plank===0)return'#d39c5e';
+ if((y===3||y===28)&&plank===3)return'#3a2416';
+ return grain<.18?'#9a6836':grain>.85?'#c9955a':'#b57f48';
+}));
+{const s=new Sheet(T,20);
+ s.each((x,y)=>y>=3&&y<8?(y===3?'#e0aa6c':y===7?'#5a3a20':hash(x>>2,y,33)<.2?'#a06c3e':'#c38a52'):y>=11&&y<15?(y===11?'#c38a52':y===14?'#5a3a20':'#a06c3e'):0);
+ for(const x of[4,20]){s.rect(x,0,7,20,'#b57f48').rect(x,0,2,20,'#d39c5e').rect(x+5,0,2,20,'#7c5230').rect(x,0,7,2,'#e9bd82').rect(x,18,7,2,'#5a3a20');for(let y=0;y<20;y++){s.set(x-1,y,'#3a2416');s.set(x+7,y,'#3a2416');}}
+ add('rail',s.outline('#3a2416'));}
 
 // ---------- Trees ----------
-const SHADOW='#16301c59';
-function tier(sheet,cx,cy,halfW,lobe,count,ramp,seed,stops=[.2,.46,.8]){
- const mask=new Sheet(sheet.w,sheet.h);
- for(let i=0;i<count;i++){const x=count===1?cx:cx-halfW+lobe+i*(2*halfW-2*lobe)/(count-1),lift=count>2&&i>0&&i<count-1?2:0;mask.disc(x,cy-lift,lobe,lobe,1);}
- const[x0,y0,x1,y1]=mask.bounds();
+const WOOD=['#3a2416','#5a3a20','#7c5230','#a06c3e','#c38a52'];
+const LEAF={
+ oak:['#113f38','#1b5a3a','#27773d','#3a9644','#5cb54a','#8fd35b','#c4ec78'],
+ deep:['#0f3833','#174f37','#20693b','#2f8440','#48a046','#74bf53','#a9dc6b'],
+ lime:['#2c5a26','#417c2a','#5f9e30','#83bd3a','#a9d748','#cfea62','#eef78f'],
+ pine:['#0e302c','#144536','#1c5c3f','#2a7648','#3f9153','#62ad62','#93cb7c'],
+ birch:['#4a6a1e','#688a24','#8bab2e','#aeca3d','#cfe354','#e9f47c','#f8fbb0']
+};
+/** One layer of a leafy crown: a row of round clumps lit from the upper left. */
+function crown(s,lobes,ramp,seed){
+ const mask=new Sheet(s.w,s.h);
+ for(const[cx,cy,r]of lobes)mask.disc(cx,cy,r,r,1);
+ const[,y0,,y1]=mask.bounds();
+ // The layer above throws a shadow on what is already drawn.
+ s.each((x,y,c)=>{
+  if(!(c&255)||mask.get(x,y))return;
+  const depth=[1,2,3,4,5].find(k=>mask.get(x,y-k));
+  if(depth)return depth<3?ramp[1]:(x+y)%2?ramp[1]:ramp[2];
+ });
  mask.each((x,y,on)=>{
   if(!on)return;
-  if(!mask.get(x,y+1))return void sheet.set(x,y,ramp[0]);
-  const value=(y-y0)/(y1-y0)*.78+((x-x0)/(x1-x0)-.5)*.42+(hash(x>>1,y>>1,seed)-.5)*.3+(hash(x,y,seed+1)-.5)*.12;
-  sheet.set(x,y,pick(value,stops,[ramp[4],ramp[3],ramp[2],ramp[1]]));
+  if(!mask.get(x,y+1))return void s.set(x,y,ramp[0]);
+  if(!mask.get(x,y+2)||!mask.get(x,y+3))return void s.set(x,y,ramp[1]);
+  let best=lobes[0],score=9;
+  for(const lobe of lobes){const k=Math.hypot(x-lobe[0],y-lobe[1])/lobe[2];if(k<score){score=k;best=lobe;}}
+  const nx=(x-best[0])/best[2],ny=(y-best[1])/best[2];
+  const leaf=((x+(y>>2)*3)%6<3&&y%4<2?.07:-.02)+(hash(x>>1,y>>1,seed)-.5)*.2;
+  const value=.5-(nx*.5+ny*.72)*.5-(y-y0)/(y1-y0)*.14+leaf;
+  s.set(x,y,tone(ramp.slice(1),value,x,y,.5));
  });
 }
-function trunk(sheet,cx,top,bottom,width,ramp){
- for(let y=top;y<=bottom;y++){const flare=y>=bottom-1?1:0,x0=cx-Math.floor(width/2)-flare,x1=x0+width-1+2*flare;
-  for(let x=x0;x<=x1;x++)sheet.set(x,y,x===x0?ramp[0]:x===x1?ramp[0]:x<=x0+1?ramp[2]:ramp[1]);}
+function trunk(s,cx,top,bottom,width){
+ for(let y=top;y<=bottom;y++){
+  const flare=y>=bottom-2?bottom-y<1?3:2:y>=bottom-5?1:0,x0=cx-width/2-flare,x1=cx+width/2-1+flare;
+  for(let x=x0;x<=x1;x++){
+   const k=(x-x0)/(x1-x0);
+   s.set(x,y,x===x0||x===x1?WOOD[0]:hash(x,y>>2,51)<.18?WOOD[1]:tone(WOOD.slice(1),.82-k*.75,x,y,.4));
+  }
+ }
 }
-const WOOD=['#4a2d1b','#6e4527','#8f6037'];
-const LEAF={
- oak:['#1c5733','#2a7a3c','#3c9b43','#5fbb4c','#93da60'],
- deep:['#174a30','#226b3a','#31883f','#4ca647','#7cc957'],
- lime:['#3a6b23','#56912d','#7bb538','#a4d444','#d2ec6a'],
- pine:['#143b30','#1c573d','#2a7648','#3f9654','#69b765'],
- birch:['#55741f','#7c9c2a','#a5c53a','#cfe054','#eef38a']
-};
-function oak(name,ramp,seed,scale=1){
- const s=new Sheet(32,42),cx=16;
- s.disc(cx,38,11,3,SHADOW);trunk(s,cx,28,39,6,WOOD);
- tier(s,cx,23,15*scale,7,4,ramp,seed);tier(s,cx,15,12*scale,7,3,ramp,seed+3);tier(s,cx,8,8*scale,6,2,ramp,seed+6);
- return add(name,s.outline(ramp[0]),[16,40]);
+function oak(name,ramp,seed,size=1){
+ const s=new Sheet(64,88),r=rng(seed),j=()=>r(3)-1,k=v=>Math.round(v*size);
+ s.disc(32,80,22*size,5,SHADOW);trunk(s,32,54,82,12);
+ crown(s,[[32-k(18)+j(),47,k(13)],[32-k(6)+j(),44+j(),k(13)],[32+k(6)+j(),44+j(),k(13)],[32+k(18)+j(),47,k(13)]],ramp,seed);
+ crown(s,[[32-k(13)+j(),31,k(13)],[32+j(),28,k(13)],[32+k(13)+j(),31,k(13)]],ramp,seed+3);
+ crown(s,[[32-k(7)+j(),17,k(11)],[32+k(7)+j(),16,k(11)]],ramp,seed+6);
+ return add(name,s.outline(ramp[0]),[32,82]);
 }
 oak('oak_0',LEAF.oak,1);oak('oak_1',LEAF.deep,2);oak('oak_2',LEAF.lime,3);oak('oak_3',LEAF.oak,4,.86);
 function pine(name,ramp,seed){
- const s=new Sheet(24,42),cx=12;
- s.disc(cx,38,8,3,SHADOW);trunk(s,cx,30,39,4,WOOD);
- [[32,11,12],[25,9,11],[18,7,10],[11,5,9]].forEach(([base,half,height],i)=>{
-  for(let y=base-height;y<=base;y++){
-   const w=Math.round(half*(y-(base-height))/height+.5);
-   for(let x=cx-w;x<=cx+w;x++){
-    if(y===base&&(x+i)%3===0)continue;
-    const value=(y-(base-height))/height*.7+((x-cx)/(half+1))*.45+(hash(x,y,seed+i)-.5)*.35;
-    s.set(x,y,y>=base-1?ramp[0]:pick(value,[.05,.4,.8],[ramp[4],ramp[3],ramp[2],ramp[1]]));
-   }
+ const s=new Sheet(48,88),cx=24;
+ s.disc(cx,80,16,5,SHADOW);trunk(s,cx,62,82,8);
+ [[70,21,24],[57,18,22],[44,14,20],[32,10,18],[21,6,15]].forEach(([base,half,height],i)=>{
+  const top=base-height,mask=new Sheet(48,88);
+  for(let y=top;y<=base;y++){
+   const w=Math.round(half*(y-top)/height+1);
+   for(let x=cx-w;x<=cx+w;x++)if(y<base-2||(x+i*2)%6>(base-y))mask.set(x,y,1);
   }
+  s.each((x,y,c)=>{if((c&255)&&!mask.get(x,y)&&[1,2,3,4].some(k=>mask.get(x,y-k)))return ramp[1];});
+  mask.each((x,y,on)=>{
+   if(!on)return;
+   if(!mask.get(x,y+1))return void s.set(x,y,ramp[0]);
+   const needle=(x+y)%4===0?.08:(x-y+64)%5===0?-.08:0;
+   s.set(x,y,tone(ramp.slice(1),.56-(x-cx)/half*.3-(y-top)/height*.32+needle+(hash(x,y,seed+i)-.5)*.16,x,y,.5));
+  });
  });
- return add(name,s.outline(ramp[0]),[12,40]);
+ return add(name,s.outline(ramp[0]),[24,82]);
 }
 pine('pine_0',LEAF.pine,5);pine('pine_1',LEAF.deep,6);
 function birch(name,seed,ramp=LEAF.birch){
- const s=new Sheet(24,42),cx=12,bark=['#8d8674','#f3efe2','#d7d1bf'];
- s.disc(cx,38,7,3,SHADOW);trunk(s,cx,16,39,4,[bark[0],bark[1],bark[1]]);
- for(let y=18;y<38;y+=3+(hash(y,seed)*3|0))s.rect(cx-1+(y%2),y,2,1,'#4b4038');
- for(let y=17;y<39;y++)s.set(cx+1,y,s.get(cx+1,y)===C(bark[1])?bark[2]:s.get(cx+1,y));
- tier(s,cx,19,11,6,3,ramp,seed);tier(s,cx,11,9,6,2,ramp,seed+2);tier(s,cx,5,5,5,1,ramp,seed+4);
- return add(name,s.outline(ramp[0]),[12,40]);
+ const s=new Sheet(48,88),cx=24,bark=['#7d7868','#bdb7a4','#e4dfce','#fbf8ee'];
+ s.disc(cx,80,14,5,SHADOW);
+ for(let y=30;y<=82;y++){const flare=y>=80?2:y>=77?1:0;for(let x=cx-4-flare;x<=cx+3+flare;x++)s.set(x,y,x===cx-4-flare||x===cx+3+flare?bark[0]:tone(bark.slice(1),.95-(x-(cx-4))/8*.8,x,y,.3));}
+ for(let y=34;y<78;y+=5+Math.floor(hash(y,seed)*5)){const side=hash(y,seed+1)<.5?-3:0;s.rect(cx+side,y,3+Math.floor(hash(y,seed+2)*2),1,'#3a332c').rect(cx+side,y+1,2,1,'#5a5148');}
+ crown(s,[[11,39,10],[24,36,10],[37,39,10]],ramp,seed);
+ crown(s,[[16,25,10],[32,24,10]],ramp,seed+2);
+ crown(s,[[24,12,9]],ramp,seed+4);
+ return add(name,s.outline(ramp[0]),[24,82]);
 }
 birch('birch_0',7);birch('birch_1',8,LEAF.lime);
-{const s=new Sheet(16,15);s.disc(8,13,6,2,SHADOW);tier(s,8,7,7,5,2,LEAF.oak,9);add('bush',s.outline(LEAF.oak[0]),[8,14]);}
+{const s=new Sheet(32,30);s.disc(16,26,13,3,SHADOW);crown(s,[[9,17,8],[16,14,9],[23,17,8]],LEAF.oak,9);add('bush',s.outline(LEAF.oak[0]),[16,28]);}
+{const s=new Sheet(32,30);s.disc(16,26,13,3,SHADOW);crown(s,[[9,17,8],[16,14,9],[23,17,8]],LEAF.deep,10);
+ for(const[x,y]of[[8,12],[14,9],[20,13],[25,17],[11,18],[17,16]]){s.rect(x,y,2,2,'#f28fb8');s.set(x,y,'#ffd0e2');s.set(x+1,y+1,'#c8558a');}
+ add('bush_bloom',s.outline(LEAF.deep[0]),[16,28]);}
 
 // ---------- Small scenery ----------
-const BLOOM={red:['#d8443a','#ff8f7a'],white:['#f3f6ff','#a9d2ff'],yellow:['#f6c93a','#fff09a'],pink:['#ec7fb1','#ffc4dc']};
-for(const[color,[petal,glow]]of Object.entries(BLOOM))for(let f=0;f<2;f++){
- const s=new Sheet(16,12);
- for(const[x,y,h]of[[3,4,6],[8,2,8],[12,5,5]]){
-  for(let i=1;i<h;i++)s.set(x+(i<3?f:0),y+i,i%3===2?GRASS.deep:'#2f7d35');
-  s.set(x-1,y+h-2,'#2f7d35');
-  const bx=x+f;s.set(bx,y-1,petal);s.set(bx-1,y,petal);s.set(bx+1,y,petal);s.set(bx,y+1,petal);s.set(bx,y,color==='yellow'?'#e58a1f':'#ffd84a');s.set(bx-1,y-1,glow);
+const BLOOM={red:['#b8302e','#e2503f','#ff9a7e'],white:['#9fbfe8','#eef3ff','#ffffff'],yellow:['#d9941f','#f6c93a','#fff3a0'],pink:['#c8558a','#f28fb8','#ffd0e2']};
+for(const[color,[dark,petal,glow]]of Object.entries(BLOOM))for(let f=0;f<2;f++){
+ const s=new Sheet(32,24);
+ for(const[x,y,h]of[[6,9,12],[14,4,17],[21,10,11],[27,6,14]]){
+  for(let i=2;i<h;i++)s.set(x+(i<6?f:0),y+i,i%4===3?'#2c6f36':'#3d8f3f');
+  s.set(x-1,y+h-5,'#3d8f3f');s.set(x-2,y+h-6,'#57ab47');s.set(x+1,y+h-8,'#3d8f3f');s.set(x+2,y+h-9,'#57ab47');
+  const bx=x+f;
+  s.rect(bx-1,y-2,3,5,petal).rect(bx-2,y-1,5,3,petal).set(bx-1,y-2,glow);s.set(bx,y-2,glow);s.set(bx-2,y-1,glow);
+  s.set(bx+2,y+1,dark);s.set(bx+1,y+2,dark);s.set(bx,y+2,dark);
+  s.rect(bx-1,y-1,2,2,color==='yellow'?'#d9741f':'#ffd84a').set(bx,y,color==='yellow'?'#a84f12':'#e8a41f');
  }
- add('flower_'+color+'_'+f,s,[8,11]);
+ add('flower_'+color+'_'+f,s,[16,23]);
 }
 for(let f=0;f<2;f++){
- const s=new Sheet(16,13);
- for(let x=1;x<15;x++){const h=4+Math.floor(hash(x,3,13)*7),lean=h>7?f:0;
-  for(let i=0;i<h;i++)s.set(x+(i>h-3?lean:0),12-i,i>h-2?GRASS.light:hash(x,i,14)<.3?GRASS.dark:GRASS.deep);}
- add('reeds_'+f,s,[8,12]);
+ const s=new Sheet(32,28);
+ for(let x=2;x<30;x++){
+  const h=9+Math.floor(hash(x,3,13)*15),lean=h>15?f:0;
+  for(let i=0;i<h;i++)s.set(x+(i>h-5?lean:0)+(i>h-2?lean:0),27-i,i>h-3?GRASS[4]:i>h-7?GRASS[3]:hash(x,i>>1,14)<.35?GRASS[0]:GRASS[1]);
+ }
+ add('reeds_'+f,s,[16,27]);
 }
 function boulder(name,w,h,wet){
- const s=new Sheet(w,h+2),cx=(w-1)/2,cy=h/2;
+ const s=new Sheet(w,h+4),cx=(w-1)/2,cy=h/2-.5,grey=['#3f414a','#5d5f68','#82848a','#a9abab','#cfd0cb','#eeeee8'];
  s.each((x,y)=>{
   const dx=(x-cx)/(w/2-.5),dy=(y-cy)/(h/2-.5),r=dx*dx+dy*dy;
   if(r>1||y>=h)return;
-  return pick(dx*.6+dy*.8+(hash(x>>1,y>>1,17)-.5)*.4,[-.45,.15,.6],['#dcdcd6','#b3b5b1','#8b8d90','#63656d']);
- }).outline('#3e3f47');
- if(wet){for(let x=1;x<w-1;x++)if(hash(x,w,19)<.75)s.set(x,h,x%3?'#e4f6ff':'#9fd4f7');}
- else s.each((x,y,c)=>!c&&y===h&&x>1&&x<w-2?SHADOW:undefined);
+  const facet=Math.floor((dx*.7-dy)*2.2+hash(Math.floor(x/5),Math.floor(y/4),17)*.9);
+  return tone(grey.slice(1),.55-dx*.26-dy*.34+facet*.07+(hash(x,y,18)-.5)*.08,x,y,.4);
+ }).outline(grey[0]);
+ if(wet)for(let x=1;x<w-1;x++){if(hash(x,w,19)<.8)s.set(x,h,x%3?'#eefaff':'#9fd8ff');if(hash(x,w,20)<.45)s.set(x,h+1,'#cfeaff');}
+ else s.each((x,y,c)=>!c&&(y===h||y===h+1)&&x>2&&x<w-3?SHADOW:undefined);
  return add(name,s,[Math.floor(w/2),h]);
 }
-boulder('boulder_0',14,11);boulder('boulder_1',10,8);boulder('wetrock_0',14,10,true);boulder('wetrock_1',9,7,true);
-for(let f=0;f<2;f++){
- const s=new Sheet(10,7);
- s.disc(4.5,3,4.5,2.6,'#3f9a48').each((x,y,c)=>c&&x>=4&&x<=5&&y<=2?0:c&&(x+y)%4===0?'#63bd58':undefined).outline('#1f6a3a');
- if(f)s.set(8,1,'#bfe6ff');
- add('lily_'+f,s,[5,4]);
+boulder('boulder_0',28,22);boulder('boulder_1',20,16);boulder('wetrock_0',28,20,true);boulder('wetrock_1',18,14,true);
+const PAD=['#16562f','#2f8a41','#49a650','#74c468'];
+function lily(name,f,bloom){
+ const s=new Sheet(22,16);
+ s.each((x,y)=>{
+  const dx=(x-10)/9.5,dy=(y-9)/5.2;if(dx*dx+dy*dy>1)return;
+  if(dy<0&&Math.abs(dx)<-dy*.42)return;
+  return Math.abs(dx*.6+dy)<.08||Math.abs(dx*.6-dy)<.06?PAD[1]:tone(PAD.slice(1),.6-dx*.3-dy*.3,x,y,.5);
+ }).outline(PAD[0]);
+ if(f)s.set(19,5,'#cfeaff');
+ if(bloom){s.rect(8,5,6,4,'#f28fb8').rect(9,4,4,6,'#f28fb8').rect(9,5,3,2,'#ffd0e2').rect(10,6,2,2,'#fff3a0').set(13,8,'#c8558a');s.set(12,9,'#c8558a');}
+ return add(name,s,[10,10]);
 }
-{const s=new Sheet(10,8);s.disc(4.5,4,4.5,2.6,'#3f9a48').outline('#1f6a3a');s.set(4,2,'#ffc4dc');s.set(5,2,'#ec7fb1');s.set(4,3,'#ec7fb1');s.set(5,3,'#fff09a');s.set(3,3,'#ffc4dc');s.set(6,3,'#ffc4dc');add('lily_bloom',s,[5,5]);}
-{const s=new Sheet(16,14);
- for(let x=0;x<16;x++){s.set(x,4,'#5f3b1e');s.set(x,5,'#d39c5e');s.set(x,6,'#9a6836');s.set(x,7,'#5f3b1e');s.set(x,9,'#5f3b1e');s.set(x,10,'#c18c52');s.set(x,11,'#5f3b1e');}
- s.rect(6,0,4,14,'#b07a44').rect(6,0,1,14,'#5f3b1e').rect(9,0,1,14,'#5f3b1e').rect(6,0,4,1,'#e0ad6e').rect(6,13,4,1,'#5f3b1e');
- add('fence',s,[8,13]);}
-{const s=new Sheet(16,14);
- s.rect(6,0,4,14,'#b07a44').rect(6,0,1,14,'#5f3b1e').rect(9,0,1,14,'#5f3b1e').rect(6,0,4,1,'#e0ad6e').rect(6,13,4,1,'#5f3b1e');
- add('post',s,[8,13]);}
+lily('lily_0',0);lily('lily_1',1);lily('lily_bloom',0,true);
+function post(s,x){
+ s.rect(x,0,7,28,'#b57f48').rect(x,0,2,28,'#d39c5e').rect(x+5,0,2,28,'#7c5230').rect(x,0,7,2,'#e9bd82').rect(x,26,7,2,'#5a3a20');
+ for(let y=0;y<28;y++){s.set(x-1,y,'#3a2416');s.set(x+7,y,'#3a2416');}
+ s.rect(x,-1,7,1,'#3a2416');
+}
+{const s=new Sheet(32,29);
+ for(const[y,h]of[[8,5],[18,4]])for(let x=0;x<32;x++)for(let i=0;i<h;i++)s.set(x,y+i,i===0?'#e0aa6c':i===h-1?'#5a3a20':hash(x>>2,y+i,35)<.2?'#a06c3e':'#c38a52');
+ s.outline('#3a2416');post(s,12);add('fence',s,[16,28]);}
+{const s=new Sheet(32,29);post(s,12);s.rect(12,0,7,1,'#3a2416');add('post',s,[16,28]);}
 for(let v=0;v<2;v++){
- const s=new Sheet(14,12),ramp=v?['#2f6e2a','#4f9f3a','#84c84f','#c4e66d']:['#27603a','#3f9148','#6fbf5b','#a9e07c'];
- s.disc(6.5,6,6,4.5,ramp[1]).each((x,y,c)=>c?pick((x-7)/7+(y-6)/5+(hash(x>>1,y>>1,23+v)-.5),[-.7,.1],[ramp[3],ramp[2],ramp[1]]):undefined).outline(ramp[0]);
- s.set(6,5,ramp[0]);s.set(7,6,ramp[0]);s.set(5,7,ramp[0]);
- add('crop_'+v,s,[7,11]);
+ const s=new Sheet(28,24),ramp=v?['#22522a','#3c8436','#62a93f','#94cf50','#cdeb7a']:['#1d4a35','#2f7a44','#4fa257','#7fc66c','#b5e58e'];
+ s.each((x,y)=>{
+  const dx=(x-13.5)/13,dy=(y-12)/10.5,r=dx*dx+dy*dy;if(r>1)return;
+  const a=Math.atan2(dy,dx),leaf=Math.abs(Math.sin(a*3+r*3+v));
+  return leaf<.16?ramp[0]:tone(ramp.slice(1),.55-dx*.22-dy*.3+(leaf-.5)*.3-r*.12,x,y,.5);
+ }).outline(ramp[0]);
+ add('crop_'+v,s,[14,22]);
 }
-{const s=new Sheet(14,18);
- s.rect(6,6,2,12,'#8f6037').rect(6,6,1,12,'#4a2d1b').rect(1,1,12,7,'#e9d6a5').rect(1,1,12,1,'#fbf0d2').rect(1,7,12,1,'#b4975f').outline('#4a2d1b');
- s.rect(3,3,8,1,'#7a5a34').rect(3,5,5,1,'#7a5a34');add('sign',s,[7,17]);}
+{const s=new Sheet(28,36);
+ s.rect(12,12,4,24,'#a06c3e').rect(12,12,1,24,'#c38a52').rect(15,12,1,24,'#5a3a20');
+ s.rect(2,2,24,14,'#ecd9a8').rect(2,2,24,2,'#fbf0d2').rect(2,14,24,2,'#b99c63').rect(2,2,2,14,'#fbf0d2').rect(24,2,2,14,'#b99c63').outline('#3a2416');
+ s.rect(6,6,16,2,'#7a5a34').rect(6,10,10,2,'#7a5a34');add('sign',s,[14,35]);}
 
 // ---------- Moving water ----------
 for(let f=0;f<4;f++){
- add('fall_'+f,new Sheet(16,16).each((x,y)=>{
-  const k=(y+16-f*4+(x*5)%7*3)%16,lane=x%4;
-  return lane===3?(k<6?'#8fc9f7':'#57a8ee'):k<3?'#f4fcff':k<8?'#bfe6ff':k<12?'#8fc9f7':'#6fb9f3';
+ add('fall_'+f,new Sheet(T,T).each((x,y)=>{
+  const lane=x%8,k=(y+T-f*8+((x>>3)*11)%T)%T;
+  if(lane===7)return k<12?'#6fb5f0':'#4ba1ea';
+  if(lane===0)return k<10?'#d9f1ff':'#9fd2f8';
+  return k<5?'#ffffff':k<12?'#d9f1ff':k<20?'#aedbfa':hash(x,(y+f*8)>>1,27)<.2?'#d9f1ff':'#84c6f6';
  }));
  // Foam where the falling water meets the river.
- add('splash_'+f,new Sheet(16,8).each((x,y)=>{
-  const crest=2+Math.floor(hash(x>>1,f,29)*3);
-  if(y<crest)return y===crest-1&&hash(x,f,30)<.4?'#d6f0ff':'#ffffff';
-  return hash(x,y+f*5,31)<.14?'#e4f6ff':0;
+ add('splash_'+f,new Sheet(T,16).each((x,y)=>{
+  const crest=5+Math.floor(hash(x>>2,f,29)*5)+Math.round(Math.sin((x+f*5)/3)*1.5);
+  if(y<crest)return y>=crest-2&&hash(x>>1,f,30)<.5?'#d9f1ff':'#ffffff';
+  return hash(x>>1,(y>>1)+f*5,31)<.16?'#eefaff':0;
  }));
 }
 for(let f=0;f<3;f++){
- const s=new Sheet(15,7),rx=3+f*2,ry=1+f;
- s.each((x,y)=>{const r=((x-7)/rx)**2+((y-3)/ry)**2;return r<=1.05&&r>=(f?.55:.2)&&hash(x,y,33+f)<.85?(f===2?'#bfe6ff99':'#e4f6ff'):0;});
- add('ripple_'+f,s,[7,3]);
+ const s=new Sheet(30,14),rx=6+f*4,ry=2.5+f*1.7;
+ s.each((x,y)=>{const r=((x-14.5)/rx)**2+((y-6.5)/ry)**2;return r<=1.05&&r>=(f?.62:.25)&&hash(x>>1,y,33+f)<.86?(f===2?'#cfeaff99':'#eefaff'):0;});
+ add('ripple_'+f,s,[15,7]);
 }
-for(let f=0;f<2;f++){const s=new Sheet(5,5);s.set(2,2,'#ffffff');if(f){s.set(2,0,'#e4f6ff');s.set(2,4,'#e4f6ff');s.set(0,2,'#e4f6ff');s.set(4,2,'#e4f6ff');s.set(2,1,'#ffffff');s.set(2,3,'#ffffff');s.set(1,2,'#ffffff');s.set(3,2,'#ffffff');}else{s.set(2,1,'#e4f6ff');s.set(2,3,'#e4f6ff');s.set(1,2,'#e4f6ff');s.set(3,2,'#e4f6ff');}add('glint_'+f,s,[2,2]);}
+for(let f=0;f<2;f++){const s=new Sheet(9,9),n=f?4:2;for(let i=-n;i<=n;i++){s.set(4+i,4,Math.abs(i)<2?'#ffffff':'#d9f1ff');s.set(4,4+i,Math.abs(i)<2?'#ffffff':'#d9f1ff');}if(f){s.set(3,3,'#eefaff');s.set(5,5,'#eefaff');s.set(3,5,'#eefaff');s.set(5,3,'#eefaff');}add('glint_'+f,s,[4,4]);}
 
-addBuildings({add,Sheet,C,hash,pick,rng,WOOD,ROCK,GRASS,SHADOW,stone});
-addActors({add,Sheet,C,hash,pick,rng,SHADOW});
+addBuildings({add,Sheet,C,hash,tone,rng,WOOD,ROCK,GRASS,SHADOW,stone,crown,LEAF});
+addActors({add,Sheet,C,hash,tone,rng,SHADOW});
 
 const {sheet,index}=atlas.pack();
 const root=path.join(path.dirname(fileURLToPath(import.meta.url)),'..','assets');

@@ -51,3 +51,10 @@ export class Atlas{
   return {sheet:out,index};
  }
 }
+
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+/** Pick a color from a dark-to-light ramp. dither blends neighboring steps in a fine checker. */
+export function tone(colors,value,x=0,y=0,dither=0){
+ const i=Math.floor(value*colors.length+(dither?(BAYER[y&3][x&3]/16-.5)*dither:0));
+ return colors[Math.max(0,Math.min(colors.length-1,i))];
+}

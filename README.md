@@ -17,7 +17,7 @@ Open `docs/index.html` in a browser. Pass a filename to the build command to upd
 
 ## Source
 
-The island is built from 16 pixel tiles, so every part of the scene shares one pixel size and can move on its own.
+The island is built from 32 pixel tiles, so every part of the scene shares one pixel size and can move on its own.
 
 - `assets/map.txt` is the island: 80 rows of 60 characters, one character per tile. Edit it in any text editor and rebuild.
 - `assets/world.json` lists each landmark, the tile in front of its door, and the villagers.

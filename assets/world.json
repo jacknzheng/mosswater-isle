@@ -1,5 +1,5 @@
 {
- "tile": 16,
+ "tile": 32,
  "places": [
   {"name": "Ferry House", "kind": "ferry", "door": [9, 33]},
   {"name": "Old Mill", "kind": "mill", "door": [34, 21]},

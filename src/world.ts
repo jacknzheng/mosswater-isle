@@ -13,7 +13,7 @@ if(lastAssigned>=6&&PACKS.length){
  for(let y=2;y<lines-2;y++)for(let x=2;x<cols-2;x++)if(grid[y][x]===","&&!solid[y*cols+x])trail.push(y*cols+x);
  for(let index=places.length;index<=lastAssigned+1;index++){
   let candidate=-1;
-  for(const spacing of [170,110,60,26,13]){
+  for(const spacing of [340,220,120,52,26]){
    const start=(index*593)%trail.length;
    for(let j=0;j<trail.length;j++){
     const id=trail[(start+j)%trail.length],p=center(id);
@@ -26,7 +26,7 @@ if(lastAssigned>=6&&PACKS.length){
   // Pitch the tent on open grass beside the trail when there is room.
   const site=[[0,-1],[-1,0],[1,0],[0,-2]].map(([dx,dy])=>[x+dx,y+dy]).find(([tx,ty])=>grid[ty]?.[tx]==="."&&!solid[ty*cols+tx]);
   if(site){block(site[0],site[1]);stand("tent",site[0]*cell+cell/2,site[1]*cell+cell-1);}
-  places.push({name:"Trail camp "+(index-1),kind:"camp",door,pin:[door[0],door[1]-(site?.[1]===y-1?36:24)],box:[door[0]-cell/2,door[1]-cell/2,cell,cell]});
+  places.push({name:"Trail camp "+(index-1),kind:"camp",door,pin:[door[0],door[1]-(site?.[1]===y-1?72:48)],box:[door[0]-cell/2,door[1]-cell/2,cell,cell]});
  }
 }
 props.sort((a,b)=>a.z-b.z);
@@ -36,9 +36,9 @@ let tile=doors[legacyStop];
 if(book.cell!==undefined&&openTile(book.cell))tile=book.cell;
 else if(Number.isInteger(book.tile)){
  // A save from the painted map counted five pixel squares, 192 to a row. Stand at the same landmark or the closest open tile.
- const x=(book.tile!%192)*5+2,y=Math.floor(book.tile!/192)*5+2;let best=Infinity;
+ const scale=W/960,x=((book.tile!%192)*5+2)*scale,y=(Math.floor(book.tile!/192)*5+2)*scale;let best=Infinity;
  for(let id=0;id<solid.length;id++)if(!solid[id]){
-  const [px,py]=center(id),distance=(x-px)**2+(y-py)**2-(doors.includes(id)?900:0);
+  const [px,py]=center(id),distance=(x-px)**2+(y-py)**2-(doors.includes(id)?(cell*1.9)**2:0);
   if(distance<best){best=distance;tile=id;}
  }
 }
@@ -58,7 +58,7 @@ function standAt(i:number){tile=doors[i];here=center(tile);facing="south";leg=nu
 function pinXY(el:HTMLElement|SVGElement,p:Point){el.style.left=(100*p[0]/W)+"%";el.style.top=(100*p[1]/H)+"%";}
 // One world pixel covers a whole number of screen pixels, so the art stays crisp.
 function size(){
- const ratio=window.devicePixelRatio||1,across=Math.min(440,Math.max(240,view.clientWidth*.34));
+ const ratio=window.devicePixelRatio||1,across=Math.min(880,Math.max(440,view.clientWidth*.68));
  const scale=Math.max(1,Math.round(view.clientWidth*ratio/across),Math.ceil(Math.max(view.clientWidth/W,view.clientHeight/H)*ratio));
  board.style.width=W*scale/ratio+"px";board.style.height=H*scale/ratio+"px";camera();
 }
@@ -92,7 +92,7 @@ function dock(){
   sign.innerHTML=icon(m?"flag":"lock");sign.append(m?.name??places[i].name);label.replaceChildren(sign);
   label.insertAdjacentHTML("beforeend",starLine(ratingStars(m?book.runs[m.date]:undefined)));
  }
- $("region-name").textContent=here[1]>=640?"Birch Highlands":"Mosswater Isle";
+ $("region-name").textContent=here[1]>=H/2?"Birch Highlands":"Mosswater Isle";
 }
 function neighbors(id:number){
  return [id+1,id-1,id+cols,id-cols].filter(n=>openTile(n)&&Math.abs(n%cols-id%cols)<=1);
@@ -113,7 +113,7 @@ function walkTo(target:number){
 }
 function updateWalk(dt:number){
  // Finish the current grid step before turning, so changing direction cannot cut a corner.
- let remaining=dt*.092;
+ let remaining=dt*.184;
  if(reduced.matches&&goal>=0&&!held.length){tile=goal;here=center(tile);leg=null;path=[];goal=-1;walking=false;camera();write();dock();return;}
  while(remaining>0){
   if(!leg){
@@ -145,11 +145,11 @@ function animateDoor(now:number){
  const t=reduced.matches?1.4:(now-entryTime!)/1000;
  entryOpen=Math.min(1,t/.26);
  const walk=Math.max(0,Math.min(1,(t-.24)/.58));
- walking=walk>0&&walk<1;stride=walk*18;const door=places[stopFor(mission)].door;here=[door[0],door[1]-walk*13];
+ walking=walk>0&&walk<1;stride=walk*36;const door=places[stopFor(mission)].door;here=[door[0],door[1]-walk*26];
  entryFade=Math.min(1,(1-walk)*3);entryClip=Math.max(0,walk-.45)*.9;
  const iris=$("iris");
  if(t>.7){
-  const pos=board.getBoundingClientRect(),x=pos.left+door[0]/W*pos.width,y=pos.top+(door[1]-14)/H*pos.height;
+  const pos=board.getBoundingClientRect(),x=pos.left+door[0]/W*pos.width,y=pos.top+(door[1]-28)/H*pos.height;
   irisRadius=Math.max(0,1-(t-.7)/.51)*Math.hypot(innerWidth,innerHeight);
   iris.hidden=false;iris.style.background='radial-gradient(circle at '+x+'px '+y+'px,transparent '+irisRadius+'px,#192c29 '+(irisRadius+2)+'px)';
  }
