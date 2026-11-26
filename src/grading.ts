@@ -37,6 +37,8 @@ function shortAnswer(card:number,answer:string):AnswerGrade|undefined{
 function displayGrade(el:HTMLElement,grade:AnswerGrade){
  const title=document.createElement("strong"),note=document.createElement("p");
  title.textContent=grade.earned+" / "+grade.total+" points";note.textContent=grade.feedback;
+ title.insertAdjacentHTML("afterbegin",'<span class="pips" aria-hidden="true">'+'<i class="on"></i>'.repeat(grade.earned)+'<i></i>'.repeat(grade.total-grade.earned)+'</span>');
+ el.classList.toggle("part",grade.earned>0&&grade.earned<grade.total);el.classList.toggle("none",grade.earned===0);
  el.replaceChildren(title,note);el.hidden=false;
  if(grade.hint){const hint=document.createElement("p");hint.textContent=grade.hint;el.append(hint);}
 }
@@ -74,7 +76,7 @@ function attachAnswerCheck(entry:Entry,input:HTMLTextAreaElement){
    if(final){
     entry.grade=grade;entry.submitted=true;entry.rating=grade.earned===grade.total?"got":"review";
     elapsed();write();question();
-    if(entry.rating==="got")cheer("✦ Correct!");
+    if(entry.rating==="got")cheer("Correct!","check");
    }else displayGrade(panel,grade);
    error.textContent="";
   }catch(cause){

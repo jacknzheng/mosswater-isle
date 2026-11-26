@@ -12,7 +12,15 @@ function validRun(run:Run, cards?:Card[]){
 }
 function validBook(b:Book){return b?.version===2&&!!b.runs&&typeof b.runs==="object"&&Object.entries(b.runs).every(([id,r])=>/^\d{4}-\d{2}-\d{2}$/.test(id)&&validRun(r,missions.find(m=>m.date===id)?.cards));}
 function ratingStars(run?:Run){return run?.cleared?Math.max(1,Math.round(5*run.entries.reduce((sum,e)=>sum+(e.grade?e.grade.earned/e.grade.total:Number(e.rating==="got")),0)/run.entries.length)):0;}
-function starLine(n:number){return '<span class="stars" aria-label="'+(n?n+' of 5 stars':'Unfinished')+'"><b>'+'★'.repeat(n)+'</b><i>'+'★'.repeat(5-n)+'</i></span>';}
+function starLine(n:number){return '<span class="stars" role="img" aria-label="'+(n?n+' of 5 stars':'Unfinished')+'">'+'<b></b>'.repeat(n)+'<i></i>'.repeat(5-n)+'</span>';}
+// The pixel font has no arrows or symbols, so these are drawn on an 8 by 8 grid.
+const glyphs:Record<string,string[]>={
+ arrow:["","",".....#",".....##","########",".....##",".....#"],
+ check:["",".......#","......##","#....##","##..##",".####","..##"],
+ flag:[".#",".####",".######",".####",".#",".#",".#","###"],
+ lock:["..####",".#....#",".#....#","########","########","###..###","########","########"]
+};
+function icon(name:string){return '<svg class="ico" viewBox="0 0 8 8" aria-hidden="true"><path d="'+glyphs[name].map((row,y)=>[...row.matchAll(/#+/g)].map(run=>"M"+run.index+" "+y+"h"+run[0].length+"v1h-"+run[0].length+"z").join("")).join("")+'"/></svg>';}
 let book:Book={version:2,active:mill.date,runs:{}};
 try{
  const b=JSON.parse(localStorage.getItem(bookKey)||"null");

@@ -1,7 +1,11 @@
 function show(){if(!popup.open)popup.showModal();paper.scrollTop=0;}
 function freeze(){elapsed();deadline=null;write();}
+function nameplate(){
+ const plate=popup.querySelector(".qhead strong")!;plate.innerHTML=icon("flag");plate.append(mission.name);
+ ($("progress").parentElement as HTMLElement).style.setProperty("--n",String(CARDS.length));
+}
 function enter(){
- popup.querySelector(".qhead strong")!.textContent="⚑  "+mission.name;
+ nameplate();
  if(state.remaining<=0&&!state.cleared){openJournal();return;}
  state.started=true;state.screen="quiz";reading=false;ending=false;deadline=document.hidden?null:Date.now()+state.remaining;write();show();question();
 }
@@ -25,11 +29,11 @@ function variance(){
  const svg=box.querySelector("svg")!,out=box.querySelector("output")!,inputs=box.querySelectorAll("input");
  function draw(){
   const gap=+inputs[0].value,s=+inputs[1].value,x=(v:number)=>180+v*27;
-  let art='<path d="M40 99H502" stroke="#919e84"/>';
-  for(let k=-4;k<=11;k++){art+='<path d="M'+x(k)+' 96v6" stroke="#72846b"/><text x="'+x(k)+'" y="116" text-anchor="middle" fill="#425640" font-size="10">'+k+'</text>';}
-  art+='<path d="M'+x(gap/2)+' 11v83" stroke="#556250" stroke-dasharray="3 4"/><path d="M'+x(gap/2)+' 91l5 5-5 5-5-5z" fill="#293c30"/>';
+  let art='<path d="M40 99H502" stroke="#b98b52"/>';
+  for(let k=-4;k<=11;k++){art+='<path d="M'+x(k)+' 96v6" stroke="#b98b52"/><text x="'+x(k)+'" y="116" text-anchor="middle" fill="#7b6248" font-size="10">'+k+'</text>';}
+  art+='<path d="M'+x(gap/2)+' 11v83" stroke="#7b6248" stroke-dasharray="3 4"/><path d="M'+x(gap/2)+' 91l5 5-5 5-5-5z" fill="#33211a"/>';
   for(const [i,m] of [0,gap].entries()){
-   const y=31+i*36,c=i===0?"#2c7464":"#aa5b35";art+='<text x="3" y="'+(y+4)+'" font-size="12" fill="'+c+'">Group '+i+'</text><path d="M'+x(m-s)+' '+y+'H'+x(m+s)+'" stroke="'+c+'" stroke-width="2"/>';
+   const y=31+i*36,c=i===0?"#2f77c8":"#b93a2c";art+='<text x="3" y="'+(y+4)+'" font-size="12" fill="'+c+'">Group '+i+'</text><path d="M'+x(m-s)+' '+y+'H'+x(m+s)+'" stroke="'+c+'" stroke-width="2"/>';
    for(const n of [m-s,m+s])art+='<circle cx="'+x(n)+'" cy="'+y+'" r="5" fill="'+c+'"/>';
    art+='<path d="M'+x(m)+' '+(y-8)+'v16" stroke="'+c+'" stroke-width="2"/>';
   }
@@ -44,7 +48,7 @@ function jacobian(){
  box.innerHTML='<h3>Follow the output</h3><p>The black cross is the predicted change (0, 0). The gold dot is the exact change. Halve the input step and watch the gap shrink.</p><svg viewBox="0 0 400 135" role="img" aria-label="Predicted and actual changes in the output plane"></svg><label>Input step ε <input type="range" min="-1" max="1" step=".05" value="1"></label><output aria-live="polite"></output>';
  const input=box.querySelector("input")!;
  function draw(){const e=+input.value,s=e*e,x=317-172*s,y=111-86*s;
- box.querySelector("svg")!.innerHTML='<path d="M105 111h255m-43-104v122" stroke="#82927a"/><path d="M317 111L145 25" stroke="#879d88" stroke-dasharray="4 4"/><path d="M311 105l12 12m0-12-12 12" stroke="#233f31" stroke-width="2"/><circle cx="'+x+'" cy="'+y+'" r="5.5" fill="#d68b37" stroke="#714e26"/><g fill="#536650" font-size="10"><text x="145" y="126" text-anchor="middle">−2</text><text x="323" y="19">ΔF₂</text><text x="350" y="126">ΔF₁</text><text x="322" y="126">0</text></g>';
+ box.querySelector("svg")!.innerHTML='<path d="M105 111h255m-43-104v122" stroke="#b98b52"/><path d="M317 111L145 25" stroke="#7b6248" stroke-dasharray="4 4"/><path d="M311 105l12 12m0-12-12 12" stroke="#33211a" stroke-width="2"/><circle cx="'+x+'" cy="'+y+'" r="5.5" fill="#f8c53a" stroke="#33211a" stroke-width="2"/><g fill="#7b6248" font-size="10"><text x="145" y="126" text-anchor="middle">−2</text><text x="323" y="19">ΔF₂</text><text x="350" y="126">ΔF₁</text><text x="322" y="126">0</text></g>';
  box.querySelector("output")!.textContent="ε = "+e+"   ·   Predicted (0, 0)   ·   Exact ("+Number((-2*s).toFixed(4))+", "+Number(s.toFixed(4))+")";}
  input.oninput=draw;draw();return box;
 }
@@ -53,7 +57,7 @@ function question(){
  const card=CARDS[i],entry=state.entries[i],graded=mission===mill;$("timer").textContent=minutes(state.remaining);$("leave").textContent="Save & exit";$("progress").style.width=(100*i/CARDS.length)+"%";
  paper.innerHTML='<div class="count">Question '+(i+1)+' / '+CARDS.length+' · '+(entry.submitted?"Feedback":"60 minute recall")+'</div><h2 id="qtitle">'+(CARDS[i].title??titles[i]??"Question "+(i+1))+'</h2>';
  if(!entry.submitted){
-  paper.insertAdjacentHTML("beforeend",'<div class="cardtext">'+card.front+'</div><div class="workarea"><label for="answer">Your answer and reasoning</label><textarea id="answer" placeholder="Show your calculation or explain your reasoning…" spellcheck="false"></textarea><div role="alert" class="error" id="error"></div><div id="check-feedback" class="check-feedback" aria-live="polite" hidden></div><div class="actions">'+(graded?'<button class="primary" id="check">Check my answer</button><button class="secondary" id="submit">Submit final answer →</button><button class="secondary" id="self-check" hidden>Reveal solution and self-check</button>':'<button class="primary" id="submit">Submit answer →</button>')+'</div></div>');
+  paper.insertAdjacentHTML("beforeend",'<div class="cardtext">'+card.front+'</div><div class="workarea"><label for="answer">Your answer and reasoning</label><textarea id="answer" placeholder="Show your calculation or explain your reasoning…" spellcheck="false"></textarea><div role="alert" class="error" id="error"></div><div id="check-feedback" class="check-feedback" aria-live="polite" hidden></div><div class="actions">'+(graded?'<button class="primary" id="check">Check my answer</button><button class="secondary" id="submit">Submit final answer '+icon("arrow")+'</button><button class="secondary" id="self-check" hidden>Reveal solution and self-check</button>':'<button class="primary" id="submit">Submit answer '+icon("arrow")+'</button>')+'</div></div>');
   const inp=$("answer") as HTMLTextAreaElement;inp.value=entry.answer;inp.oninput=()=>{entry.answer=inp.value;$("error").textContent="";elapsed();write();};
   if(graded){
    const help=document.createElement("small");help.textContent="Checks let you revise. Written reasoning uses OpenAI. Only your final answer counts.";inp.after(help);
@@ -65,18 +69,18 @@ function question(){
   if(entry.grade){
    const panel=document.createElement("div");panel.className="check-feedback";
    paper.querySelector(".note")!.after(panel);displayGrade(panel,entry.grade);
-   const next=document.createElement("button");next.className="primary";next.id="next";next.textContent=i===CARDS.length-1?"Finish mission →":"Next question →";
+   const next=document.createElement("button");next.className="primary";next.id="next";next.innerHTML=(i===CARDS.length-1?"Finish mission ":"Next question ")+icon("arrow");
    next.onclick=()=>{refreshClock();if(reading||entry.reviewed)return;entry.reviewed=true;write();question();};paper.append(next);
   }else{
-  paper.insertAdjacentHTML("beforeend",'<div class="rating"><h3>How did your reasoning compare?</h3><p>Your check goes in your field notebook.</p><div class="actions"><button class="primary" id="got">Got it ✓</button><button class="secondary" id="review">Needs review</button></div></div>');
+  paper.insertAdjacentHTML("beforeend",'<div class="rating"><h3>How did your reasoning compare?</h3><p>Your check goes in your field notebook.</p><div class="actions"><button class="primary" id="got">Got it '+icon("check")+'</button><button class="secondary" id="review">Needs review</button></div></div>');
   $("got").onclick=()=>rate("got");$("review").onclick=()=>rate("review");
   }
  }
  paper.scrollTop=0;focusTitle();
 }
 function focusTitle(){const h=$("qtitle");h.tabIndex=-1;h.focus({preventScroll:true});}
-function cheer(text:string){
- const tag=document.createElement("div");tag.className="burst";tag.textContent=text;tag.setAttribute("role","status");
+function cheer(text:string,glyph:string){
+ const tag=document.createElement("div");tag.className="burst";tag.innerHTML=icon(glyph);tag.append(text);tag.setAttribute("role","status");
  if(!reduced.matches)for(let i=0;i<10;i++){const star=document.createElement("i");star.className="spark";star.style.setProperty("--dx",Math.cos(i*.628)*85+"px");star.style.setProperty("--dy",Math.sin(i*.628)*45+"px");tag.append(star);}
  popup.append(tag);setTimeout(()=>tag.remove(),reduced.matches?650:1000);
 }
@@ -95,7 +99,7 @@ function rate(result:"got"|"review"){
  if(result==="review"){if(current()<0)finish();else question();return;}
  const token=++celebrationId;
  const seal=document.createElement("div");seal.className="seal";seal.setAttribute("role","status");
- seal.innerHTML='<span aria-hidden="true">✦</span><strong>Correct</strong><small>FIELD NOTES</small>';
+ seal.innerHTML=icon("check")+'<strong>Correct</strong><small>FIELD NOTES</small>';
  popup.append(seal);
  const bar=$("progress");const start=seal.getBoundingClientRect(),track=bar.parentElement!.getBoundingClientRect();
  const endX=track.left+(i+1)/CARDS.length*track.width,endY=track.top+track.height/2;
@@ -111,12 +115,12 @@ function rate(result:"got"|"review"){
 }
 function finish(){
  ending=true;state.cleared=true;state.screen="map";state.node=20;standAt(stopFor(mission));freeze();$("progress").style.width="100%";$("timer").textContent=CARDS.length+" / "+CARDS.length;$("leave").textContent="Return to island";
- paper.innerHTML='<div class="count">Checkpoint cleared</div><h2 id="qtitle">Mission cleared!</h2><p>'+starLine(ratingStars(state))+' · Your score is saved in the field notebook.</p><button class="primary" id="return">Return to island →</button>';
- cheer("⚑  Mission cleared");const back=()=>{clearTimeout(feedbackTimer);ending=false;leave();$("flag").classList.remove("rise");requestAnimationFrame(()=>$("flag").classList.add("rise"));$("leave").onclick=leave;};
+ paper.innerHTML='<div class="count">Checkpoint cleared</div><h2 id="qtitle">Mission cleared!</h2><p>'+starLine(ratingStars(state))+' · Your score is saved in the field notebook.</p><button class="primary" id="return">Return to island '+icon("arrow")+'</button>';
+ cheer("Mission cleared","flag");const back=()=>{clearTimeout(feedbackTimer);ending=false;leave();$("flag").classList.remove("rise");requestAnimationFrame(()=>$("flag").classList.add("rise"));$("leave").onclick=leave;};
  $("return").onclick=back;$("leave").onclick=back;feedbackTimer=window.setTimeout(back,reduced.matches?1700:2800);focusTitle();
 }
 function openJournal(){
- popup.querySelector(".qhead strong")!.textContent="⚑  "+mission.name;
+ nameplate();
  reading=true;state.screen="map";freeze();show();
  const marked=state.entries.filter(e=>e.rating).length,hits=state.entries.filter(e=>e.rating==="got").length;
  $("progress").style.width=(100*marked/CARDS.length)+"%";$("timer").textContent=minutes(state.remaining);$("leave").textContent="Back to island";
@@ -129,6 +133,6 @@ function openJournal(){
   if(e.submitted){const solution=document.createElement("div");solution.className="cardtext";solution.innerHTML='<h3>Worked solution</h3>'+CARDS[i].back;d.append(solution);if(mission===mill&&i===0)d.append(variance());if(mission===mill&&i===7)d.append(jacobian());}
   $("record").append(d);
  });
- if(!state.cleared){paper.insertAdjacentHTML("beforeend",'<div class="actions"><button class="primary" id="continue">Continue in a new hour →</button></div>');$("continue").onclick=()=>{state.remaining=3600000;enter();};}
+ if(!state.cleared){paper.insertAdjacentHTML("beforeend",'<div class="actions"><button class="primary" id="continue">Continue in a new hour '+icon("arrow")+'</button></div>');$("continue").onclick=()=>{state.remaining=3600000;enter();};}
  focusTitle();
 }

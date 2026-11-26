@@ -87,9 +87,9 @@ function dock(){
   const run=book.runs[latest.date];title=latest.name;
   if(run?.cleared){text="Completed · "+run.entries.filter(e=>e.rating==="got").length+" / "+run.entries.length+" correct";btn="Open field notebook";action=()=>{selectMission(latest);openJournal();};}
   else if(run?.started&&run.remaining<=0){text="Your work from this hour is saved.";btn="View session";action=()=>{selectMission(latest);openJournal();};}
-  else{text="60 minute recall · "+latest.cards.length+" questions";btn=run?.started?"Resume mission →":"Enter mission →";action=()=>{selectMission(latest);enterDoor();};}
+  else{text="60 minute recall · "+latest.cards.length+" questions";btn=(run?.started?"Resume mission ":"Enter mission ")+icon("arrow");action=()=>{selectMission(latest);enterDoor();};}
  }else if(which>1){const date=nextDate(which);title=p.name+" · Locked";text=unlocked(date)?"This mission is awaiting its quiz.":"Opens "+dateLabel(date)+" at 9 a.m. Pacific.";btn="Return to the mill";action=()=>walkTo(doors[1]);}
- else{text="Choose a checkpoint or explore the Birch Highlands to the south.";btn="Walk to the Old Mill →";}
+ else{text="Choose a checkpoint or explore the Birch Highlands to the south.";btn="Walk to the Old Mill "+icon("arrow");}
  $("dock").innerHTML='<div class="eyebrow">'+(which===1?"Checkpoint 01":which>1?"Future checkpoint":"Island map")+'</div><h2>'+title+'</h2>'+(which>0?starLine(ratingStars(latest?book.runs[latest.date]:undefined)):'')+'<p>'+text+'</p><div class="actions"><button class="primary" id="action">'+btn+'</button></div><p class="keys">Arrow keys or WASD to walk · Click a destination</p>';
  $("action").onclick=action;
  for(const older of offered.slice(0,-1).reverse()){
@@ -100,7 +100,8 @@ function dock(){
  for(let i=1;i<places.length;i++){
   const m=availableAt(i).at(-1),pin=$("pin"+i);
   pin.classList.toggle("locked",!m);pin.classList.toggle("available",!!m);
-  const label=pin.querySelector("label")!;label.textContent=(m?"⚑ ":"🔒 ")+(m?.name??places[i].name);
+  const label=pin.querySelector("label")!,sign=document.createElement("span");
+  sign.innerHTML=icon(m?"flag":"lock");sign.append(m?.name??places[i].name);label.replaceChildren(sign);
   label.insertAdjacentHTML("beforeend",starLine(ratingStars(m?book.runs[m.date]:undefined)));
  }
  $("flag").toggleAttribute("hidden",!book.runs[mill.date]?.cleared);pinXY($("flag"),[588,302]);
@@ -180,7 +181,7 @@ function mapFrame(now:number){
 }
 function installMap(){
  places.forEach((p,i)=>{
-  const b=document.createElement("button");b.id="pin"+i;b.className="mark "+(i===1?"available":i>1?"future":"");b.setAttribute("aria-label","Walk to "+p.name);b.innerHTML="<label>"+(i===1?"⚑ ":"")+p.name+"</label>";pinXY(b,p.pin);b.onclick=e=>{e.stopPropagation();walkTo(doors[i]);};$("pins").append(b);
+  const b=document.createElement("button");b.id="pin"+i;b.className="mark "+(i===1?"available":i>1?"future":"");b.setAttribute("aria-label","Walk to "+p.name);b.innerHTML="<label><span>"+p.name+"</span></label>";pinXY(b,p.pin);b.onclick=e=>{e.stopPropagation();walkTo(doors[i]);};$("pins").append(b);
  });
  board.onclick=e=>{
   const r=board.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;

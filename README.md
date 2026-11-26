@@ -24,7 +24,7 @@ Open `docs/index.html` in a browser. Pass a filename to the build command to upd
 
 ## Play and save
 
-The public game is served from `docs/index.html` on GitHub Pages. The map uses the bundled Pixelify Sans font under the SIL Open Font License. The question panel uses system reading fonts and native math. Follow the river south from the village to Birch Highlands. Two bridges connect the library, station and grotto trails.
+The public game is served from `docs/index.html` on GitHub Pages. The whole interface uses the bundled Pixelify Sans font under the SIL Open Font License, with pixel-art frames, buttons and icons drawn in CSS and inline SVG. Formulas use native math. While the game is locked, the island art shows behind the PIN prompt as a title screen. Follow the river south from the village to Birch Highlands. Two bridges connect the library, station and grotto trails.
 
 Five gray stars mark an unfinished mission. A completed quiz earns the nearest whole number to five times the average fraction of points earned per question (a full point for a legacy “Got it”), with a minimum of one. The notebook retains individual answers and self-checks.
 
