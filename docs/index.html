@@ -336,7 +336,7 @@ function standAt(i) { tile = doors[i]; here = center(tile); facing = "south"; le
 function pinXY(el, p) { el.style.left = (100 * p[0] / W) + "%"; el.style.top = (100 * p[1] / H) + "%"; }
 // One world pixel covers a whole number of screen pixels, so the art stays crisp.
 function size() {
-    const ratio = window.devicePixelRatio || 1, across = Math.min(880, Math.max(440, view.clientWidth * .68));
+    const ratio = window.devicePixelRatio || 1, across = Math.min(1320, Math.max(660, view.clientWidth * 1.02));
     const scale = Math.max(1, Math.round(view.clientWidth * ratio / across), Math.ceil(Math.max(view.clientWidth / W, view.clientHeight / H) * ratio));
     board.style.width = W * scale / ratio + "px";
     board.style.height = H * scale / ratio + "px";
@@ -441,7 +441,7 @@ function walkTo(target) {
 }
 function updateWalk(dt) {
     // Finish the current grid step before turning, so changing direction cannot cut a corner.
-    let remaining = dt * .184;
+    let remaining = dt * .276;
     if (reduced.matches && goal >= 0 && !held.length) {
         tile = goal;
         here = center(tile);
