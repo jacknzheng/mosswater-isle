@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-27",
+  "name": "Star Observatory",
+  "cards": [
+    {
+      "id": 2026112701,
+      "title": "A dual basis",
+      "front": "<p>In ℝ², use the basis b₁ = (1, 1) and b₂ = (1, −1). A dual basis consists of two linear functions φ₁ and φ₂: φᵢ(bⱼ) is 1 when i = j and 0 otherwise.</p><p><strong>Find explicit formulas for φ₁(x, y) and φ₂(x, y).</strong> Verify the four required values. Write each function as ax + by.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Write φ₁(x, y) = ax + by. Its required values give a + b = 1 and a − b = 0, so φ₁(x, y) = (x + y)/2.</p><p>For φ₂, the equations are a + b = 0 and a − b = 1, so φ₂(x, y) = (x − y)/2.</p><p>Thus φ₁(b₁) = 1, φ₁(b₂) = 0, φ₂(b₁) = 0 and φ₂(b₂) = 1. These functions extract the coefficients of a vector in the chosen basis; they are not the basis vectors themselves.</p>"
+    },
+    {
+      "id": 2026112702,
+      "title": "Stable rank and ordinary rank",
+      "front": "<p>For a nonzero matrix A with singular values σ₁ ≥ σ₂ ≥ ⋯ ≥ 0, its stable rank is (σ₁² + σ₂² + ⋯)/σ₁². Its ordinary rank is the number of nonzero singular values.</p><p><strong>Construct a diagonal matrix with ordinary rank 100 but stable rank less than 2.</strong> Specify all its diagonal entries and calculate both ranks. Explain in one sentence why there is no contradiction.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>One example is A = diag(1, 0.01, …, 0.01), with 99 copies of 0.01.</p><p>All 100 diagonal entries are nonzero, so rank(A) = 100. Its stable rank is 1 + 99(0.01)² = 1.009 &lt; 2.</p><p>Ordinary rank counts every nonzero direction; stable rank measures the total squared stretching relative to the strongest direction. Many weak directions can contribute very little to stable rank.</p>"
+    },
+    {
+      "id": 2026112703,
+      "title": "A quadratic conjugate",
+      "front": "<p>Let f(x) = 2x² for real x. Its Fenchel conjugate is defined by f*(y) = sup over real x of [yx − f(x)], where y is fixed.</p><p><strong>Find f*(y) as a formula in y.</strong> Show which x attains the supremum and why it is a maximum. Keep the maximizing input and the maximum value distinct in your answer.</p><p><small>Allow about 5 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Complete the square:</p><p>yx − 2x² = −2(x − y/4)² + y²/8.</p><p>The squared term is nonnegative, so the expression is at most y²/8, with equality exactly at x = y/4.</p><p>Therefore f*(y) = y²/8. The maximizing input is y/4; the conjugate is the attained value y²/8.</p>"
+    },
+    {
+      "id": 2026112704,
+      "title": "The largest possible tail probability",
+      "front": "<p>A random variable X is nonnegative and has mean E[X] = 3. No other information about its distribution is given.</p><p><strong>Find the largest possible value of P(X ≥ 12).</strong> Prove that no larger value is possible, and give a distribution of X that achieves your answer.</p><p><small>Allow about 3 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Whenever X ≥ 12, its contribution to the mean is at least 12. Since X is nonnegative elsewhere, 3 = E[X] ≥ 12P(X ≥ 12). Thus P(X ≥ 12) ≤ 1/4.</p><p>This bound is attained by P(X = 12) = 1/4 and P(X = 0) = 3/4. The mean is 12/4 = 3, so the largest possible probability is exactly 1/4.</p>"
+    },
+    {
+      "id": 2026112705,
+      "title": "The scale of a sample mean",
+      "front": "<p>X₁, …, Xₙ are independent and identically distributed, with mean µ and variance σ², where 0 &lt; σ² &lt; ∞. Write X̄ₙ = (X₁ + ⋯ + Xₙ)/n.</p><p><strong>Find the factor cₙ &gt; 0 for which cₙ(X̄ₙ − µ) has variance 1.</strong> Derive it from the variance of the sum, then state the limiting distribution given by the central limit theorem. Do not assume the Xᵢ themselves are normal.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Independence gives Var(X₁ + ⋯ + Xₙ) = nσ², so Var(X̄ₙ) = σ²/n.</p><p>Therefore Var[cₙ(X̄ₙ − µ)] = cₙ²σ²/n. Setting this equal to 1 gives cₙ = √n/σ.</p><p>The central limit theorem says √n(X̄ₙ − µ)/σ converges in distribution to N(0, 1). For finite n the variance is exactly 1, but the distribution need not be exactly normal.</p>"
+    },
+    {
+      "id": 2026112706,
+      "title": "Compressing a signal in time",
+      "front": "<p>For an integrable function f on ℝ, define its Fourier transform by F(s) = ∫<sub>ℝ</sub> f(t)e<sup>−2πist</sup> dt. Here s is frequency and i² = −1. Let g(t) = f(3t), and let G be the Fourier transform of g using the same convention.</p><p><strong>Express G(s) in terms of F.</strong> Derive the formula by changing the integration variable. Your answer should show both the factor outside F and its new argument.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Start with G(s) = ∫<sub>ℝ</sub> f(3t)e<sup>−2πist</sup> dt. Set u = 3t, so t = u/3 and dt = du/3.</p><p>Then G(s) = (1/3)∫<sub>ℝ</sub> f(u)e<sup>−2πi(s/3)u</sup> du = (1/3)F(s/3).</p><p>Compressing time by a factor of 3 spreads the frequency scale by a factor of 3 and multiplies the transform amplitude by 1/3.</p>"
+    },
+    {
+      "id": 2026112707,
+      "title": "Can principal logarithms be added?",
+      "front": "<p>For nonzero complex z, define Log z = ln|z| + i Arg z, with Arg z in (−π, π]. Let z = w = e<sup>3πi/4</sup>.</p><p><strong>Does Log(zw) = Log z + Log w hold for these values?</strong> Calculate both sides and explain any difference using their arguments.</p><p><small>Allow about 3 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Log z + Log w = 3πi/4 + 3πi/4 = 3πi/2.</p><p>But zw = e<sup>3πi/2</sup> = −i, whose principal argument is −π/2. Thus Log(zw) = −πi/2.</p><p>The right side exceeds the left side by 2πi. Adding the two principal arguments leaves the allowed interval, so the argument of the product must wrap back into it.</p>"
+    },
+    {
+      "id": 2026112708,
+      "title": "How much can a fixed point move?",
+      "front": "<p>Maps T and S take a metric space into itself. The distance between two points is written d. Suppose T has fixed point p, S has fixed point q, and, for every x and y:</p><p>d(Tx, Ty) ≤ ½d(x, y), and d(Tx, Sx) ≤ 0.1.</p><p><strong>Prove that d(p, q) ≤ 0.2.</strong> Give the short chain of inequalities. Existence of the two fixed points is already assumed; you do not need to prove it.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>Use p = Tp and q = Sq, and insert Tq:</p><p>d(p, q) = d(Tp, Sq) ≤ d(Tp, Tq) + d(Tq, Sq) ≤ ½d(p, q) + 0.1.</p><p>Subtract ½d(p, q) from both sides. This gives ½d(p, q) ≤ 0.1, hence d(p, q) ≤ 0.2.</p><p>The contraction prevents a small change in the map from causing an arbitrarily large change in its fixed point.</p>"
+    },
+    {
+      "id": 2026112709,
+      "title": "Checking the regularity condition",
+      "front": "<p>For n = 2ᵏ with integer k ≥ 1, consider T(n) = 2T(n/2) + f(n), where f(2ᵏ) = 4ᵏ[2 − (−1)ᵏ]. Define f(1) by the same formula with k = 0.</p><p>The usual third case of the Master theorem requires a constant c &lt; 1 such that 2f(n/2) ≤ cf(n) for every sufficiently large n.</p><p><strong>Does this f satisfy that regularity condition?</strong> Calculate 2f(n/2)/f(n) separately for even and odd k, then give your conclusion. You do not need to solve the recurrence.</p><p><small>Allow about 5 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>The ratio is ½[2 + (−1)ᵏ]/[2 − (−1)ᵏ].</p><p>When k is even, it is 3/2. When k is odd, it is 1/6. There are arbitrarily large even k, so no fixed c &lt; 1 can bound every sufficiently late ratio.</p><p>The regularity condition fails. It is not enough that n² ≤ f(n) ≤ 3n²: the condition also controls how the work changes between adjacent recursion levels. Failure of this condition prevents this direct use of the theorem; it does not by itself determine T(n).</p>"
+    },
+    {
+      "id": 2026112710,
+      "title": "Combining two sigma-algebras",
+      "front": "<p>Let Ω = {1, 2, 3}. Two sigma-algebras on Ω are:</p><p>𝒜 = {∅, Ω, {1}, {2, 3}}<br>ℬ = {∅, Ω, {2}, {1, 3}}.</p><p><strong>Is the collection 𝒜 ∪ ℬ itself a sigma-algebra?</strong> Answer yes or no and justify it using a closure requirement. The union here combines the two collections; it does not automatically add unions of their member sets.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>No. The collection contains {1} and {2}, but it does not contain their union {1, 2}.</p><p>A sigma-algebra must be closed under countable unions, which includes a union of two sets. Thus 𝒜 ∪ ℬ fails the requirement even though each collection separately satisfies it.</p><p>To obtain the smallest sigma-algebra containing both, one must add the missing sets; here that gives all subsets of Ω.</p>"
+    },
+    {
+      "id": 2026112711,
+      "title": "A prime test that can be fooled",
+      "front": "<p>Fermat’s little theorem says that if p is prime and a is not divisible by p, then a<sup>p−1</sup> ≡ 1 (mod p). A proposed test therefore declares an odd integer n prime whenever 2<sup>n−1</sup> ≡ 1 (mod n).</p><p><strong>Show that n = 341 fools this test.</strong> Show that 341 is composite and that it passes the stated test. You may use 341 = 11 × 31 and 2¹⁰ = 1024; explain the modular steps without expanding 2³⁴⁰.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>The factorization 341 = 11 × 31 shows that 341 is composite.</p><p>Since 1024 = 3 × 341 + 1, we have 2¹⁰ ≡ 1 (mod 341). Raising both sides to the 34th power gives 2³⁴⁰ ≡ 1 (mod 341).</p><p>So 341 passes the test despite being composite. Fermat’s theorem gives a necessary condition for primality in this setting; reversing the implication is invalid.</p>"
+    },
+    {
+      "id": 2026112712,
+      "title": "A limit on comparison sorting",
+      "front": "<p>A deterministic algorithm sorts four distinct items using only comparisons of two items. Each comparison has two possible outcomes because all items are distinct.</p><p><strong>Prove that some input order requires at least five comparisons.</strong> Count the possible input orders and compare that count with the most outcome sequences available from four comparisons. You do not need to construct a sorting algorithm.</p><p><small>Allow about 4 minutes to answer and 1 minute for feedback. Stop at 60 minutes total. Read the feedback once, then move on.</small></p>",
+      "back": "<p>There are 4! = 24 possible orders of the four distinct items. A correct comparison-based algorithm must distinguish all of them.</p><p>If every input used at most four comparisons, its binary decision tree would have depth at most 4 and at most 2⁴ = 16 leaves. That is too few to distinguish 24 orders.</p><p>Therefore at least one input requires more than four comparisons, hence at least five. This is a worst-case lower bound; it does not say every input requires five.</p>"
+    }
+  ]
+}
